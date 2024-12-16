@@ -12,7 +12,17 @@ rpm-ostree install neovim zsh \
 
 # Install Awesome WM
 #  - include dependencies for default config
-rpm-ostree install plasma-workspace-x11 awesome rofi rofi-themes rofi-themes-base16 ranger kitty
+rpm-ostree install plasma-workspace-x11 awesome rofi rofi-themes rofi-themes-base16 ranger kitty \
+  redshift-gtk copyq flameshot autorandr nitrogen barrier \
+  xscreensaver-base xscreensaver-extras xscreensaver-gl-base xscreensaver-gl-extras
+
+# Install user dotfiles
+dotfile_config_cmd='/usr/bin/git --git-dir=/etc/skel/.cfg/ --work-tree=/etc/skel'
+git clone --depth 1 --recurse-submodules --shallow-submodules --bare https://github.com/syndr/dotfiles.git /etc/skel/.cfg
+cd /etc/skel
+echo ".cfg" >> .gitignore
+$dotfile_config_cmd config --local status.showUntrackedFiles no
+$dotfile_config_cmd checkout
 
 # Configure Awesome WM
 mkdir -p /etc/skel/.config
