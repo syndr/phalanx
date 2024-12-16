@@ -11,7 +11,8 @@ rpm-ostree install neovim zsh \
   adcli oddjob oddjob-mkhomedir sssd-ad realmd samba-common-tools
 
 # Install Awesome WM
-rpm-ostree install plasma-workspace-x11 awesome
+#  - include dependencies for default config
+rpm-ostree install plasma-workspace-x11 awesome rofi rofi-themes rofi-themes-base16 ranger kitty
 
 # Configure Awesome WM
 mkdir -p /etc/skel/.config
