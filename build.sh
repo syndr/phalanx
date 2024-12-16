@@ -22,6 +22,9 @@ git clone --depth 1 --recurse-submodules --shallow-submodules --bare https://git
 cd /etc/skel
 echo ".cfg" >> .gitignore
 $dotfile_config_cmd config --local status.showUntrackedFiles no
+# Remove existing files
+rm -f .zshrc
+# Load the dotfiles
 $dotfile_config_cmd checkout
 
 # Configure Awesome WM
