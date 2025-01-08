@@ -50,6 +50,13 @@ FROM ghcr.io/ublue-os/${SOURCE_IMAGE}${SOURCE_SUFFIX}:${SOURCE_TAG}
 
 COPY build /tmp/build
 
+RUN ls -lha /tmp
+RUN ls -lha /tmp/build
+RUN ls -lha /tmp/build/awesome
+RUN ls -lha /tmp/build/awesome/build.sh
+RUN ls -lha /tmp/build/base
+RUN cat /tmp/build/awesome/build.sh
+
 RUN mkdir -p /var/lib/alternatives && \
     /tmp/build/awesome/build.sh && \
     ostree container commit
