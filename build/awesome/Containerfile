@@ -58,7 +58,8 @@ RUN ls -lha /tmp/build/base
 RUN cat /tmp/build/awesome/build.sh
 
 RUN mkdir -p /var/lib/alternatives && \
-    /tmp/build/awesome/build.sh && \
+    cd /tmp/build/awesome && \
+    ./build.sh && \
     ostree container commit
 ## NOTES:
 # - /var/lib/alternatives is required to prevent failure with some RPM installs
