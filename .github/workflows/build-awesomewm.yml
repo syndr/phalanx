@@ -1,0 +1,30 @@
+---
+name: build-awesomewm
+on:
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: '05 10 * * *'  # 10:05am UTC everyday
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/build-awesomewm.yml'
+      - '.github/workflows/build.yml'
+      - 'build/awesome/*'
+      - 'build/base/*'
+      - '!**/README.md'
+  workflow_dispatch:
+
+jobs:
+  build_base:
+    name: Build and push image
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    uses: ./.github/workflows/build.yml
+    with:
+      permutation: "awesome"
+
