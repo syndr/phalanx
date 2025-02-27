@@ -10,8 +10,8 @@ source ../awesome/build.sh
 echo "Removing unprofessional packages"
 rpm-ostree override remove steam lutris
 
-echo "Installing Productivity Software"
-wget "https://downloads.1password.com/linux/rpm/stable/x86_64/1password-latest.rpm"
-
-rpm-ostree install ./1password-latest.rpm
+#echo "Installing Productivity Software"
+#wget "https://downloads.1password.com/linux/rpm/stable/x86_64/1password-latest.rpm"
+#
+#rpm-ostree install ./1password-latest.rpm
 

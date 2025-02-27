@@ -1,5 +1,5 @@
 ---
-name: build-awesomewm
+name: build-workstation
 on:
   pull_request:
     branches:
@@ -18,13 +18,20 @@ on:
   workflow_dispatch:
 
 jobs:
-  build_base:
+  build_workstation:
     name: Build and push image
     permissions:
       contents: read
       packages: write
       id-token: write
+    strategy:
+      max-parallel: 4
+      matrix:
+        upstream_suffix:
+          - ""
+          - "nvidia"
     uses: ./.github/workflows/build.yml
     with:
       permutation: "workstation"
+      image_suffix: ${{ matrix.upstream_suffix }}
 
