@@ -10,7 +10,7 @@ source ../base/build.sh
 # Install Awesome WM
 #  - include dependencies for default config
 echo "Installing Awesome WM"
-rpm-ostree install plasma-workspace-x11 awesome picom rofi rofi-themes rofi-themes-base16 ranger kitty \
+rpm-ostree install plasma-workspace-x11 awesome picom rofi-wayland rofi-themes rofi-themes-base16 ranger kitty \
   redshift-gtk copyq flameshot autorandr nitrogen barrier \
   xscreensaver-base xscreensaver-extras xscreensaver-gl-base xscreensaver-gl-extras
 
