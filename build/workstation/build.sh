@@ -7,6 +7,9 @@ RELEASE="$(rpm -E %fedora)"
 echo "Installing Awesome WM"
 source ../awesome/build.sh
 
+echo "Installing Utilities"
+rpm-ostree install git-delta
+
 echo "Removing unprofessional packages"
 rpm-ostree override remove steam steam-devices lutris
 
