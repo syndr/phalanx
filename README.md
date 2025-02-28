@@ -7,4 +7,5 @@ An opinionated Linux system based upon Fedora Atomic OS and [universal blue](htt
 Current versions are:
  - `base`
  - `awesome`
+ - `workstation`
 
