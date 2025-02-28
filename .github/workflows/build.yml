@@ -1,23 +1,36 @@
 ---
-name: build-ublue-custom
+# This is a reusable workflow to build Phalanx variant images.
+# https://docs.github.com/en/actions/using-workflows/reusing-workflows
+#
+
 on:
-  pull_request:
-    branches:
-      - main
-  schedule:
-    - cron: '05 10 * * *'  # 10:05am UTC everyday
-  push:
-    branches:
-      - main
-    paths-ignore:
-      - '**/README.md'
-  workflow_dispatch:
-
-env:
-  MY_IMAGE_NAME: "${{ github.event.repository.name }}"  # the name of the image produced by this build, matches repo names
-  MY_IMAGE_DESC: "My Customized Universal Blue Image"
-  IMAGE_REGISTRY: "ghcr.io/${{ github.repository_owner }}"  # do not edit
-
+  workflow_call:
+    inputs:
+      permutation:
+        required: false
+        description: "Variant of the image to build"
+        type: string
+        default: "base"
+      description:
+        required: false
+        description: "Description of the image"
+        type: string
+        default: "Phalanx Universal Blue Image"
+      image_registry:
+        required: false
+        description: "Registry to push the image to"
+        type: string
+        default: "ghcr.io/${{ github.repository_owner }}"
+      image_name:
+        required: false
+        description: "Custom name of the image to build"
+        type: string
+        default: ""
+      image_suffix:
+        required: false
+        description: "Suffix of upstream image base to build"
+        type: string
+        default: ""
 jobs:
   build_push:
     name: Build and push image
@@ -28,10 +41,28 @@ jobs:
       packages: write
       id-token: write
 
+    env:
+      MY_IMAGE_DESC: ${{ inputs.description }}
+      IMAGE_REGISTRY: ${{ inputs.image_registry }}
     steps:
       # Checkout push-to-registry action GitHub repository
       - name: Checkout Push to Registry action
         uses: actions/checkout@v4
+
+      - name: Generate image name
+        id: process-image-name
+        run: |
+          if [[ -n "${{ inputs.image_suffix }}" ]]; then
+              IMAGE_SUFFIX="-${{ inputs.image_suffix }}"
+              echo "IMAGE_SUFFIX=${IMAGE_SUFFIX}" >> $GITHUB_ENV
+          fi
+          if [[ -z "${{ inputs.image_name }}" ]]; then
+              echo "No custom image name provided, using default."
+              echo "MY_IMAGE_NAME=${{ github.event.repository.name }}-${{ inputs.permutation }}$IMAGE_SUFFIX" >> $GITHUB_ENV
+          else
+              echo "Custom image name provided, using it."
+              echo "MY_IMAGE_NAME=${{ inputs.image_name }}$IMAGE_SUFFIX" >> $GITHUB_ENV
+          fi
 
       - name: Maximize build space
         uses: ublue-os/remove-unwanted-software@v8
@@ -95,7 +126,7 @@ jobs:
         uses: redhat-actions/buildah-build@v2
         with:
           containerfiles: |
-            ./Containerfile
+            build/${{ inputs.permutation }}/Containerfile
           # Postfix image name with -custom to make it a little more descriptive
           # Syntax: https://docs.github.com/en/actions/learn-github-actions/expressions#format
           image: ${{ env.MY_IMAGE_NAME }}
@@ -103,6 +134,8 @@ jobs:
             ${{ steps.generate-tags.outputs.alias_tags }}
           labels: ${{ steps.meta.outputs.labels }}
           oci: false
+          build-args: |
+            SOURCE_SUFFIX=${{ env.IMAGE_SUFFIX }}
 
       # Workaround bug where capital letters in your GitHub username make it impossible to push to GHCR.
       # https://github.com/macbre/push-to-ghcr/issues/12
