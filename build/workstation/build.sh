@@ -11,7 +11,7 @@ echo "Installing Utilities"
 rpm-ostree install git-delta
 
 echo "Removing unprofessional packages"
-rpm-ostree override remove steam steam-devices lutris
+rpm-ostree override remove steam steam-devices steam-device-rules lutris
 
 #echo "Installing Productivity Software"
 #wget "https://downloads.1password.com/linux/rpm/stable/x86_64/1password-latest.rpm"
