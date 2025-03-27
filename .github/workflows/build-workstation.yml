@@ -12,6 +12,7 @@ on:
     paths:
       - '.github/workflows/build-workstation.yml'
       - '.github/workflows/build.yml'
+      - 'build/awesome/*'
       - 'build/workstation/*'
       - 'build/base/*'
       - '!**/README.md'
