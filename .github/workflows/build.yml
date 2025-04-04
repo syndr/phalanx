@@ -65,7 +65,7 @@ jobs:
           fi
 
       - name: Maximize build space
-        uses: ublue-os/remove-unwanted-software@v8
+        uses: ublue-os/remove-unwanted-software@v9
 
       - name: Generate tags
         id: generate-tags
