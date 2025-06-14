@@ -1,25 +1,24 @@
 ---
-name: build-workstation
+name: build-hyprland
 on:
   pull_request:
     branches:
       - main
   schedule:
-    - cron: '45 10 * * *'  # 10:45am UTC everyday
+    - cron: '25 10 * * *'  # 10:25am UTC everyday
   push:
     branches:
       - main
     paths:
-      - '.github/workflows/build-workstation.yml'
+      - '.github/workflows/build-hyprland.yml'
       - '.github/workflows/build.yml'
-      - 'build/awesome/*'
-      - 'build/workstation/*'
+      - 'build/hyprland/*'
       - 'build/base/*'
       - '!**/README.md'
   workflow_dispatch:
 
 jobs:
-  build_workstation:
+  build_hyprland:
     name: Build and push image
     permissions:
       contents: read
@@ -34,6 +33,6 @@ jobs:
           - "nvidia"
     uses: ./.github/workflows/build.yml
     with:
-      permutation: "workstation"
+      permutation: "hyprland"
       image_suffix: ${{ matrix.upstream_suffix }}
 

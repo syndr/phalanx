@@ -1,11 +1,23 @@
 #!/bin/bash
 
-set -ouex pipefail
+# Check for -v argument in $@
+if [[ " $@ " =~ " -v " ]]; then
+  TRACE=1
+fi
+
+if [[ "${TRACE:-0}" -ne 0 ]]; then
+  set -ouex pipefail
+else
+  set -oue pipefail
+fi
 
 RELEASE="$(rpm -E %fedora)"
 
-echo "Installing Awesome WM"
-source ../awesome/build.sh
+#echo "Installing Awesome WM"
+#source ../awesome/build.sh
+
+echo "Installing Hyprland"
+source ../hyprland/build.sh
 
 echo "Installing Utilities"
 rpm-ostree install git-delta
