@@ -11,7 +11,7 @@ on:
       - 'build/base/*'
       - '!**/*.md'
   schedule:
-    - cron: '05 10 * * *'  # 10:05am UTC everyday
+    - cron: '45 10 * * *'  # 10:45am UTC everyday
   push:
     branches:
       - main

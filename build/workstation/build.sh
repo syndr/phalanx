@@ -1,11 +1,23 @@
 #!/bin/bash
 
-set -ouex pipefail
+# Check for -v argument in $@
+if [[ " $@ " =~ " -v " ]]; then
+  TRACE=1
+fi
+
+if [[ "${TRACE:-0}" -ne 0 ]]; then
+  set -ouex pipefail
+else
+  set -oue pipefail
+fi
 
 RELEASE="$(rpm -E %fedora)"
 
 echo "Running base configuration for Fedora $RELEASE"
 source ../base/build.sh
+
+echo "Installing Hyprland"
+source ../hyprland/build.sh
 
 echo "Installing Utilities"
 rpm-ostree install git-delta copyq ranger kitty rofi-wayland rofi-themes rofi-themes-base16

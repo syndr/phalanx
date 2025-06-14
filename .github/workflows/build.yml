@@ -31,6 +31,11 @@ on:
         description: "Suffix of upstream image base to build"
         type: string
         default: ""
+      verbose:
+        required: false
+        description: "Enable verbose (trace) mode for build scripts"
+        type: boolean
+        default: false
 jobs:
   build_push:
     name: Build and push image
@@ -44,6 +49,7 @@ jobs:
     env:
       MY_IMAGE_DESC: ${{ inputs.description }}
       IMAGE_REGISTRY: ${{ inputs.image_registry }}
+      TRACE: ${{ runner.debug || inputs.verbose && '1' || '0' }}
     steps:
       # Checkout push-to-registry action GitHub repository
       - name: Checkout Push to Registry action

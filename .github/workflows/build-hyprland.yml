@@ -1,37 +1,38 @@
 ---
-name: build-awesomewm
+name: build-hyprland
 on:
   pull_request:
     branches:
       - main
-    paths:
-      - '.github/workflows/build-awesomewm.yml'
-      - '.github/workflows/build.yml'
-      - 'build/awesome/*'
-      - 'build/base/*'
-      - '!**/*.md'
   schedule:
-    - cron: '15 10 * * *'  # 10:15am UTC everyday
+    - cron: '25 10 * * *'  # 10:25am UTC everyday
   push:
     branches:
       - main
     paths:
-      - '.github/workflows/build-awesomewm.yml'
+      - '.github/workflows/build-hyprland.yml'
       - '.github/workflows/build.yml'
-      - 'build/awesome/*'
+      - 'build/hyprland/*'
       - 'build/base/*'
-      - '!**/*.md'
+      - '!**/README.md'
   workflow_dispatch:
 
 jobs:
-  build_awesomewm:
+  build_hyprland:
     name: Build and push image
     permissions:
       contents: read
       packages: write
       id-token: write
     secrets: inherit
+    strategy:
+      max-parallel: 4
+      matrix:
+        upstream_suffix:
+          - ""
+          - "nvidia"
     uses: ./.github/workflows/build.yml
     with:
-      permutation: "awesome"
+      permutation: "hyprland"
+      image_suffix: ${{ matrix.upstream_suffix }}
 

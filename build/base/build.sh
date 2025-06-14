@@ -1,6 +1,15 @@
 #!/bin/bash
 
-set -ouex pipefail
+# Check for -v argument in $@
+if [[ " $@ " =~ " -v " ]]; then
+  TRACE=1
+fi
+
+if [[ "${TRACE:-0}" -ne 0 ]]; then
+  set -ouex pipefail
+else
+  set -oue pipefail
+fi
 
 RELEASE="$(rpm -E %fedora)"
 
