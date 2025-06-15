@@ -49,7 +49,7 @@ jobs:
     env:
       MY_IMAGE_DESC: ${{ inputs.description }}
       IMAGE_REGISTRY: ${{ inputs.image_registry }}
-      TRACE: ${{ runner.debug || inputs.verbose && '1' || '0' }}
+      TRACE: ${{ inputs.verbose && '1' || '0' }}
     steps:
       # Checkout push-to-registry action GitHub repository
       - name: Checkout Push to Registry action
