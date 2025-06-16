@@ -1,6 +1,29 @@
 #!/bin/bash
+# Configuration for Awesome WM desktop environment
 
-set -ouex pipefail
+# Package list for Awesome WM configuration
+awesome_packages=(
+  # Base packages
+  awesome picom
+
+  # Screen management and utilities
+  xscreensaver-base xscreensaver-extras xscreensaver-gl-base xscreensaver-gl-extras
+  autorandr nitrogen barrier
+
+  # User utilities
+  flameshot copyq ranger kitty redshift-gtk
+)
+
+# Check for -v argument in $@
+if [[ " $@ " =~ " -v " ]]; then
+  TRACE=1
+fi
+
+if [[ "${TRACE:-0}" -ne 0 ]]; then
+  set -ouex pipefail
+else
+  set -oue pipefail
+fi
 
 RELEASE="$(rpm -E %fedora)"
 
@@ -9,22 +32,8 @@ source ../base/build.sh
 
 # Install Awesome WM
 #  - include dependencies for default config
-echo "Installing Awesome WM"
-rpm-ostree install plasma-workspace-x11 awesome picom rofi-wayland rofi-themes rofi-themes-base16 ranger kitty \
-  redshift-gtk copyq flameshot autorandr nitrogen barrier \
-  xscreensaver-base xscreensaver-extras xscreensaver-gl-base xscreensaver-gl-extras
-
-# Install user dotfiles
-echo "Installing user dotfiles"
-dotfile_config_cmd='/usr/bin/git --git-dir=/etc/skel/.cfg/ --work-tree=/etc/skel'
-git clone --depth 1 --recurse-submodules --shallow-submodules --bare https://github.com/syndr/dotfiles.git /etc/skel/.cfg
-cd /etc/skel
-echo ".cfg" >> .gitignore
-$dotfile_config_cmd config --local status.showUntrackedFiles no
-# Remove existing files
-rm -f .zshrc
-# Load the dotfiles
-$dotfile_config_cmd checkout
+echo "Installing Awesome WM packages"
+rpm-ostree install "${awesome_packages[@]}"
 
 echo "Configuring Awesome WM"
 # Configure Awesome WM
