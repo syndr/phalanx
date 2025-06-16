@@ -1,4 +1,16 @@
 #!/bin/bash
+# Workstation-specific configuration for Fedora
+
+# Package list for workstation configuration
+workstation_packages=(
+  # Git and diff tools
+  git-delta
+)
+
+# Unprofessional packages that should be removed
+workstation_packages_remove=(
+  steam steam-devices steam-device-rules lutris
+)
 
 # Check for -v argument in $@
 if [[ " $@ " =~ " -v " ]]; then
@@ -19,20 +31,11 @@ source ../base/build.sh
 echo "Installing Hyprland"
 source ../hyprland/build.sh
 
-echo "Installing Utilities"
-rpm-ostree install git-delta copyq ranger kitty rofi-wayland rofi-themes rofi-themes-base16
+echo "Installing Workstation packages"
+rpm-ostree install "${workstation_packages[@]}"
 
-echo "Installing dotfiles"
-# Clone dotfiles to temporary directory
-git clone --depth 1 --recurse-submodules --shallow-submodules https://github.com/syndr/dotfiles.git /tmp/dotfiles
-# Copy files to /etc/skel (excluding .git directory)
-cd /tmp/dotfiles
-# Remove existing files that might conflict
-rm -f /etc/skel/.zshrc
-# Copy all dotfiles except .git directory
-find . -mindepth 1 -maxdepth 1 ! -name '.git' -exec cp -r {} /etc/skel/ \;
-# Clean up temporary directory
-rm -rf /tmp/dotfiles
+echo "Removing unprofessional packages"
+rpm-ostree override remove "${workstation_packages_remove[@]}"
 
 echo "Adding 1Password repository"
 # Add 1Password official RPM repository

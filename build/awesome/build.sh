@@ -1,4 +1,18 @@
 #!/bin/bash
+# Configuration for Awesome WM desktop environment
+
+# Package list for Awesome WM configuration
+awesome_packages=(
+  # Base packages
+  awesome picom
+
+  # Screen management and utilities
+  xscreensaver-base xscreensaver-extras xscreensaver-gl-base xscreensaver-gl-extras
+  autorandr nitrogen barrier
+
+  # User utilities
+  flameshot copyq ranger kitty redshift-gtk
+)
 
 # Check for -v argument in $@
 if [[ " $@ " =~ " -v " ]]; then
@@ -18,10 +32,8 @@ source ../base/build.sh
 
 # Install Awesome WM
 #  - include dependencies for default config
-echo "Installing Awesome WM"
-rpm-ostree install plasma-workspace-x11 awesome picom rofi-wayland rofi-themes rofi-themes-base16 ranger kitty \
-  redshift-gtk copyq flameshot autorandr nitrogen barrier \
-  xscreensaver-base xscreensaver-extras xscreensaver-gl-base xscreensaver-gl-extras
+echo "Installing Awesome WM packages"
+rpm-ostree install "${awesome_packages[@]}"
 
 echo "Configuring Awesome WM"
 # Configure Awesome WM
