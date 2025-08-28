@@ -12,7 +12,6 @@ on:
     paths:
       - '.github/workflows/build-workstation.yml'
       - '.github/workflows/build.yml'
-      - 'build/awesome/*'
       - 'build/workstation/*'
       - 'build/base/*'
       - '!**/README.md'
@@ -20,7 +19,7 @@ on:
 
 jobs:
   build_workstation:
-    name: Build and push image
+    name: Build and push workstation image
     permissions:
       contents: read
       packages: write
@@ -37,3 +36,20 @@ jobs:
       permutation: "workstation"
       image_suffix: ${{ matrix.upstream_suffix }}
 
+  build_workstation_nofun:
+    name: Build and push workstation-nofun image
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    secrets: inherit
+    strategy:
+      max-parallel: 4
+      matrix:
+        upstream_suffix:
+          - ""
+          - "nvidia"
+    uses: ./.github/workflows/build.yml
+    with:
+      permutation: "workstation-nofun"
+      image_suffix: ${{ matrix.upstream_suffix }}
