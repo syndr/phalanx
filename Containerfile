@@ -38,6 +38,11 @@ ARG SOURCE_SUFFIX=""
 ## SOURCE_TAG arg must be a version built for the specific image: eg, 39, 40, gts, latest
 ARG SOURCE_TAG="latest"
 
+## VARIANT arg specifies which build variant to use: base, awesome, workstation
+ARG VARIANT="base"
+
+# This must be the folder containing the build script and any other files needed for the build
+ARG WORKING_DIR="/tmp/build/${VARIANT}"
 
 ### 2. SOURCE IMAGE
 ## this is a standard Containerfile FROM using the build ARGs above to select the right upstream image
@@ -48,8 +53,11 @@ FROM ghcr.io/ublue-os/${SOURCE_IMAGE}${SOURCE_SUFFIX}:${SOURCE_TAG}
 
 COPY build /tmp/build
 
+# Declare ARG again after FROM to make it available in RUN
+ARG VARIANT=base
+
 RUN mkdir -p /var/lib/alternatives && \
-    cd /tmp/build/awesome && \
+    cd /tmp/build/${VARIANT} && \
     ./build.sh && \
     ostree container commit
 ## NOTES:
