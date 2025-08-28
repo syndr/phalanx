@@ -4,6 +4,11 @@ on:
   pull_request:
     branches:
       - main
+    paths:
+      - '.github/workflows/build-awesomewm.yml'
+      - '.github/workflows/build.yml'
+      - 'build/base/*'
+      - '!**/*.md'
   schedule:
     - cron: '05 10 * * *'  # 10:05am UTC everyday
   push:
@@ -13,7 +18,7 @@ on:
       - '.github/workflows/build-awesomewm.yml'
       - '.github/workflows/build.yml'
       - 'build/base/*'
-      - '!**/README.md'
+      - '!**/*.md'
   workflow_dispatch:
 
 jobs:
