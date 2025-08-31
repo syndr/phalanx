@@ -4,6 +4,9 @@ set -ouex pipefail
 
 RELEASE="$(rpm -E %fedora)"
 
+echo "Running base configuration for Fedora $RELEASE"
+source ../base/build.sh
+
 echo "Installing Utilities"
 rpm-ostree install git-delta copyq ranger kitty rofi-wayland rofi-themes rofi-themes-base16
 
@@ -39,7 +42,6 @@ rpm-ostree install 1password || {
     echo "1Password repository has been configured and can be installed after first boot"
 }
 
-# Install Docker CE
 echo "Adding Docker CE repository"
 curl -fsSL https://download.docker.com/linux/fedora/docker-ce.repo -o /etc/yum.repos.d/docker-ce.repo
 
