@@ -8,6 +8,27 @@ hyprland_packages=(
 
   # Screen management and utilities
   hypridle hyprlock hyprsunset satty hyprpaper waypaper mpvpaper swww
+
+  # Desktop components
+  dunst waybar
+
+  # Screenshot tools
+  grim slurp
+
+  # Terminal
+  wezterm
+
+  # Display management
+  wlr-randr kanshi wdisplays
+
+  # Audio control
+  pavucontrol pwvucontrol pamixer
+
+  # System utilities
+  brightnessctl playerctl network-manager-applet blueman btop
+
+  # Scripting and helper tools
+  jq socat wl-clipboard
 )
 
 # Check for -v argument in $@
