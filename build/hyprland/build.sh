@@ -15,14 +15,11 @@ hyprland_packages=(
   # Screenshot tools
   grim slurp
 
-  # Terminal
-  wezterm
-
   # Display management
   wlr-randr kanshi wdisplays
 
   # Audio control
-  pavucontrol pwvucontrol pamixer
+  pavucontrol pamixer
 
   # System utilities
   brightnessctl playerctl network-manager-applet blueman btop

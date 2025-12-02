@@ -17,7 +17,7 @@ base_packages=(
   kvantum kvantum-data arc-kde-kvantum
 
   # User utilities
-  rofi-wayland rofi-themes rofi-themes-base16 ranger kitty copyq
+  rofi-wayland rofi-themes rofi-themes-base16 ranger kitty wezterm copyq
 )
 
 
@@ -36,6 +36,9 @@ RELEASE="$(rpm -E %fedora)"
 
 
 ### Install packages
+echo "Adding wezfurlong/wezterm-nightly COPR repository"
+dnf5 copr enable -y wezfurlong/wezterm-nightly
+
 echo "Installing base packages"
 rpm-ostree install "${base_packages[@]}"
 
