@@ -1,32 +1,62 @@
 #!/bin/bash
 # Configuration for Hyprland desktop environment
 
+# COPR Repos and packages needed from them
+# lionheartp/Hyprland - hyprland, hyprpolkitagent, swww, cliphist
+# erikreider/SwayNotificationCenter - SwayNotificationCenter
+# errornointernet/packages - wallust
+# tofik/nwg-shell - nwg-displays, nwg-look
+
+# List of COPR repositories to be added and enabled
+# solopasha/hyprland   # No longer getting updated
+# Replaced with sdegler/hypr-test 11/21/2025
+# Replaced sdegler/hypr-test with lionheartp/Hyprland  11/24/25
+
+copr_repos=(
+    # Enable for Fedora 43 and later
+    # lionheartp/Hyprland
+
+    # Enable for Fedora 42. May no longer be updated!
+    solopasha/hyprland
+
+    erikreider/SwayNotificationCenter
+    errornointernet/packages
+    tofik/nwg-shell
+)
+
 # Package list for Hyprland configuration
 hyprland_packages=(
-  # Base packages
-  # Note: polkit-kde from base KDE image handles authentication prompts
-  hyprland hyprland-plugins hyprpanel pyprland
+  # Core Hyprland (polkit agent added conditionally below due to Qt conflicts on NVIDIA)
+  hyprland
 
-  # Screen management and utilities
-  hypridle hyprlock hyprsunset satty hyprpaper waypaper mpvpaper swww
+  # Terminal and launchers
+  kitty wlogout
+
+  # Theming and appearance
+  kvantum qt5ct qt6ct qt6-qtsvg nwg-look
+
+  # Wallpaper and color
+  swww wallust
 
   # Desktop components
-  dunst waybar
+  waybar SwayNotificationCenter nwg-displays
 
   # Screenshot tools
-  grim slurp
+  grim slurp swappy
 
-  # Display management
-  wlr-randr kanshi wdisplays
-
-  # Audio control
-  pavucontrol pamixer
+  # Audio and media
+  pavucontrol pamixer pipewire-alsa pipewire-utils playerctl
+  mpv mpv-mpris cava
 
   # System utilities
-  brightnessctl playerctl network-manager-applet blueman btop
+  brightnessctl btop gnome-system-monitor nvtop
+  network-manager-applet gvfs gvfs-mtp
+  inxi fastfetch loupe mousepad qalculate-gtk yad
 
   # Scripting and helper tools
-  jq socat wl-clipboard
+  bc curl findutils gawk git ImageMagick jq openssl unzip wget2
+  wl-clipboard cliphist xdg-user-dirs xdg-utils
+  python3-requests python3-pip python3-pyquery
 )
 
 # Check for -v argument in $@
@@ -45,15 +75,22 @@ RELEASE="$(rpm -E %fedora)"
 echo "Running base configuration for Fedora $RELEASE"
 source ../base/build.sh
 
-# Install Hyprland from COPR
-#  - include dependencies for default config
-echo "Adding solopasha/hyprland COPR repository"
-dnf5 copr enable -y solopasha/hyprland
+# Configure COPR repositories
+echo "Enabling required COPR repositories"
+for repo in "${copr_repos[@]}"; do
+  echo "Enabling COPR repository: $repo"
+  dnf5 copr enable -y "$repo"
+done
 
-# Verify polkit agent is available
-if ! rpm -q polkit-kde &>/dev/null; then
-  echo "Warning: polkit-kde not found in base image, installing polkit-gnome as fallback"
-  hyprland_packages+=(polkit-gnome)
+# Add polkit agent - hyprpolkitagent requires Qt 6.9 but NVIDIA images ship Qt 6.10
+# Base bazzite image includes polkit-kde, so we fall back to that when hyprpolkitagent won't work
+QT_VERSION=$(rpm -q qt6-qtbase --queryformat '%{VERSION}' 2>/dev/null || echo "unknown")
+echo "Detected Qt version: $QT_VERSION"
+if [[ "$QT_VERSION" == 6.10* ]]; then
+  echo "Qt 6.10 detected - using polkit-kde from base image (hyprpolkitagent requires Qt 6.9)"
+else
+  echo "Using hyprpolkitagent"
+  hyprland_packages+=(hyprpolkitagent)
 fi
 
 echo "Installing Hyprland and dependencies"
