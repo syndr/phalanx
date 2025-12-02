@@ -27,13 +27,13 @@ copr_repos=(
 # Package list for Hyprland configuration
 hyprland_packages=(
   # Core Hyprland (polkit agent added conditionally below due to Qt conflicts on NVIDIA)
-  hyprland
+  hyprland hyprland-plugins
 
   # Terminal and launchers
   kitty wlogout
 
   # Theming and appearance
-  kvantum qt5ct qt6ct qt6-qtsvg nwg-look
+  kvantum qt5ct qt6ct qt6-qtsvg nwg-look hyprland-qtutils hyprcursor
 
   # Wallpaper and color
   swww wallust
@@ -60,7 +60,34 @@ hyprland_packages=(
   bc curl findutils gawk git ImageMagick jq openssl unzip wget2
   wl-clipboard cliphist xdg-user-dirs xdg-utils
   python3-requests python3-pip python3-pyquery
-  meson cmake gcc-c++
+
+  # Extras
+  hyprutils hyprgraphics hyprlang aquamarine
+)
+
+# Development packages for hyprpm plugin building
+hyprland_plugin_build_deps=(
+  # Build tools
+  meson cmake gcc-c++ ninja-build
+
+  # Hyprland development headers
+  #hyprland-devel
+  hyprwayland-scanner-devel
+
+  # Wayland development
+  wayland-devel
+  wayland-protocols-devel
+
+  # Graphics development
+  libX11-devel
+
+  # Input and display
+  libxcb-devel
+
+  # Rendering libraries
+  pixman-devel
+  cairo-devel
+  pango-devel
 )
 
 # Check for -v argument in $@
@@ -99,4 +126,7 @@ fi
 
 echo "Installing Hyprland and dependencies"
 rpm-ostree install "${hyprland_packages[@]}"
+
+echo "Installing plugin build dependencies (for hyprpm)"
+rpm-ostree install "${hyprland_plugin_build_deps[@]}"
 
