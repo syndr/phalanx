@@ -4,7 +4,8 @@
 # Package list for Hyprland configuration
 hyprland_packages=(
   # Base packages
-  hyprland hyprland-plugins hyprpanel hyprpolkitagent pyprland
+  # Note: polkit-kde from base KDE image handles authentication prompts
+  hyprland hyprland-plugins hyprpanel pyprland
 
   # Screen management and utilities
   hypridle hyprlock hyprsunset satty hyprpaper waypaper mpvpaper swww
@@ -48,6 +49,12 @@ source ../base/build.sh
 #  - include dependencies for default config
 echo "Adding solopasha/hyprland COPR repository"
 dnf5 copr enable -y solopasha/hyprland
+
+# Verify polkit agent is available
+if ! rpm -q polkit-kde &>/dev/null; then
+  echo "Warning: polkit-kde not found in base image, installing polkit-gnome as fallback"
+  hyprland_packages+=(polkit-gnome)
+fi
 
 echo "Installing Hyprland and dependencies"
 rpm-ostree install "${hyprland_packages[@]}"
