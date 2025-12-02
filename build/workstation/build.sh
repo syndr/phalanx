@@ -7,11 +7,6 @@ workstation_packages=(
   git-delta
 )
 
-# Unprofessional packages that should be removed
-workstation_packages_remove=(
-  steam steam-devices steam-device-rules lutris
-)
-
 # Check for -v argument in $@
 if [[ " $@ " =~ " -v " ]]; then
   TRACE=1
@@ -33,9 +28,6 @@ source ../hyprland/build.sh
 
 echo "Installing Workstation packages"
 rpm-ostree install "${workstation_packages[@]}"
-
-echo "Removing unprofessional packages"
-rpm-ostree override remove "${workstation_packages_remove[@]}"
 
 echo "Adding 1Password repository"
 # Add 1Password official RPM repository
