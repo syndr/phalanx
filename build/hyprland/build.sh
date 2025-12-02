@@ -41,6 +41,9 @@ hyprland_packages=(
   # Desktop components
   waybar SwayNotificationCenter nwg-displays
 
+  # Screen locking and power management
+  hyprlock hypridle
+
   # Screenshot tools
   grim slurp swappy
 
@@ -57,6 +60,7 @@ hyprland_packages=(
   bc curl findutils gawk git ImageMagick jq openssl unzip wget2
   wl-clipboard cliphist xdg-user-dirs xdg-utils
   python3-requests python3-pip python3-pyquery
+  meson cmake gcc-c++
 )
 
 # Check for -v argument in $@
