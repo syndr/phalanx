@@ -14,16 +14,17 @@
 
 copr_repos=(
     # Enable for Fedora 43 and later
-    # lionheartp/Hyprland
+    lionheartp/Hyprland
 
-    # Enable for Fedora 42. May no longer be updated!
-    solopasha/hyprland
+    # Original source, maintainer appears to be AWOL!
+    #solopasha/hyprland
 
     erikreider/SwayNotificationCenter
     errornointernet/packages
     tofik/nwg-shell
 )
 
+# need to add: swww, hyprland-qtutils
 # Package list for Hyprland configuration
 hyprland_packages=(
   # Core Hyprland (polkit agent added conditionally below due to Qt conflicts on NVIDIA)
@@ -33,10 +34,10 @@ hyprland_packages=(
   kitty wlogout
 
   # Theming and appearance
-  kvantum qt5ct qt6ct qt6-qtsvg nwg-look hyprland-qtutils hyprcursor
+  kvantum qt5ct qt6ct qt6-qtsvg nwg-look hyprcursor hyprland-qt-support
 
   # Wallpaper and color
-  swww wallust
+  wallust
 
   # Desktop components
   waybar SwayNotificationCenter nwg-displays
