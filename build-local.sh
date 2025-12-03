@@ -35,10 +35,12 @@ fi
 
 PERMUTATION="${1:-base}"
 IMAGE_SUFFIX="${2:-${IMAGE_SUFFIX:-}}"
-CONTAINERFILE="build/${PERMUTATION}/Containerfile"
+CONTAINERFILE="Containerfile"
+BUILD_SCRIPT="build/${PERMUTATION}/build.sh"
 
-if [ ! -f "$CONTAINERFILE" ]; then
-  echo "Containerfile not found for permutation: $PERMUTATION"
+if [ ! -f "$BUILD_SCRIPT" ]; then
+  echo "Build script not found for variant: $PERMUTATION"
+  echo "Expected: $BUILD_SCRIPT"
   exit 1
 fi
 
@@ -60,6 +62,8 @@ fi
 
 echo "Building image: $IMAGE_NAME using $CONTAINERFILE"
 
-buildah bud -f "$CONTAINERFILE" -t "$IMAGE_NAME" --build-arg SOURCE_SUFFIX="$IMAGE_SUFFIX_TAG" .
+buildah bud -f "$CONTAINERFILE" -t "$IMAGE_NAME" \
+  --build-arg VARIANT="$PERMUTATION" \
+  --build-arg SOURCE_SUFFIX="$IMAGE_SUFFIX_TAG" .
 
 echo "Image built locally as $IMAGE_NAME. Not pushing to any registry."
