@@ -31,6 +31,11 @@ on:
         description: "Suffix of upstream image base to build"
         type: string
         default: ""
+      verbose:
+        required: false
+        description: "Enable verbose (trace) mode for build scripts"
+        type: boolean
+        default: false
 jobs:
   build_push:
     name: Build and push image
@@ -44,6 +49,7 @@ jobs:
     env:
       MY_IMAGE_DESC: ${{ inputs.description }}
       IMAGE_REGISTRY: ${{ inputs.image_registry }}
+      TRACE: ${{ inputs.verbose && '1' || '0' }}
     steps:
       # Checkout push-to-registry action GitHub repository
       - name: Checkout Push to Registry action
@@ -154,19 +160,23 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Push Image to GHCR
-        uses: redhat-actions/push-to-registry@v2
+        uses: Wandalen/wretry.action@v3
         id: push
         env:
           REGISTRY_USER: ${{ github.actor }}
           REGISTRY_PASSWORD: ${{ github.token }}
         with:
-          image: ${{ steps.build_image.outputs.image }}
-          tags: ${{ steps.build_image.outputs.tags }}
-          registry: ${{ steps.registry_case.outputs.lowercase }}
-          username: ${{ env.REGISTRY_USER }}
-          password: ${{ env.REGISTRY_PASSWORD }}
-          extra-args: |
-            --compression-format=zstd
+          action: redhat-actions/push-to-registry@v2
+          attempt_limit: 10
+          attempt_delay: 10000
+          with: |
+            image: ${{ steps.build_image.outputs.image }}
+            tags: ${{ steps.build_image.outputs.tags }}
+            registry: ${{ steps.registry_case.outputs.lowercase }}
+            username: ${{ env.REGISTRY_USER }}
+            password: ${{ env.REGISTRY_PASSWORD }}
+            extra-args: |
+              --compression-format=zstd
 
       # This section is optional and only needs to be enabled if you plan on distributing
       # your project for others to consume. You will need to create a public and private key
@@ -182,6 +192,6 @@ jobs:
         run: |
           cosign sign -y --key env://COSIGN_PRIVATE_KEY ${{ steps.registry_case.outputs.lowercase }}/${{ steps.build_image.outputs.image }}@${TAGS}
         env:
-          TAGS: ${{ steps.push.outputs.digest }}
+          TAGS: ${{ steps.push.outputs.outputs_digest }}
           COSIGN_EXPERIMENTAL: false
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
