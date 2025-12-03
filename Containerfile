@@ -38,7 +38,7 @@ ARG SOURCE_SUFFIX=""
 ## SOURCE_TAG arg must be a version built for the specific image: eg, 39, 40, gts, latest
 ARG SOURCE_TAG="stable"
 
-## VARIANT arg specifies which build variant to use: base, awesome, workstation
+## VARIANT arg specifies which build variant to use: base, awesome, workstation, hyprland
 ARG VARIANT="base"
 
 # This must be the folder containing the build script and any other files needed for the build

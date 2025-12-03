@@ -1,6 +1,6 @@
 ![Phalanx](files/logo.png)
 
-[![build-base](https://github.com/syndr/phalanx/actions/workflows/build-base.yml/badge.svg)](https://github.com/syndr/phalanx/actions/workflows/build-base.yml) [![build-awesomewm](https://github.com/syndr/phalanx/actions/workflows/build-awesomewm.yml/badge.svg)](https://github.com/syndr/phalanx/actions/workflows/build-awesomewm.yml) [![build-workstation](https://github.com/syndr/phalanx/actions/workflows/build-workstation.yml/badge.svg)](https://github.com/syndr/phalanx/actions/workflows/build-workstation.yml)
+[![build-base](https://github.com/syndr/phalanx/actions/workflows/build-base.yml/badge.svg)](https://github.com/syndr/phalanx/actions/workflows/build-base.yml) [![build-awesomewm](https://github.com/syndr/phalanx/actions/workflows/build-awesomewm.yml/badge.svg)](https://github.com/syndr/phalanx/actions/workflows/build-awesomewm.yml) [![build-hyprland](https://github.com/syndr/phalanx/actions/workflows/build-hyprland.yml/badge.svg)](https://github.com/syndr/phalanx/actions/workflows/build-hyprland.yml) [![build-workstation](https://github.com/syndr/phalanx/actions/workflows/build-workstation.yml/badge.svg)](https://github.com/syndr/phalanx/actions/workflows/build-workstation.yml)
 
 An opinionated, immutable Linux desktop system built on Fedora Atomic OS and [Universal Blue](https://universal-blue.org/), designed for security, reliability, and developer productivity.
 
@@ -27,6 +27,15 @@ A keyboard-driven desktop environment built on base:
 - Complete desktop stack (Picom compositor, Rofi launcher, Nitrogen wallpaper manager)
 - Pre-configured dotfiles and window manager configuration
 - Screen management tools (autorandr, redshift)
+
+### `hyprland`
+Modern Wayland compositor desktop environment:
+- Hyprland dynamic tiling compositor with full Wayland support
+- Complete desktop stack (Waybar, SwayNotificationCenter, wlogout)
+- Wallpaper and theming (swww, wallust, Kvantum, hyprcursor)
+- Screen utilities (hyprlock, hypridle, grim, slurp)
+- Plugin build dependencies included for hyprpm customization
+- Audio/media tools (pavucontrol, playerctl, mpv, cava)
 
 ### `workstation`
 Full-featured development environment:
@@ -60,6 +69,12 @@ sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/syndr/phalanx-base:lat
 
 # For awesome variant
 sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/syndr/phalanx-awesome:latest
+
+# For hyprland variant
+sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/syndr/phalanx-hyprland:latest
+
+# For hyprland with NVIDIA
+sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/syndr/phalanx-hyprland-nvidia:latest
 
 # For workstation variant
 sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/syndr/phalanx-workstation:latest

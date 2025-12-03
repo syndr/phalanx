@@ -4,12 +4,13 @@ An opinionated Linux system based upon Fedora Atomic OS and Universal Blue that 
 
 ## Project Overview
 
-Phalanx creates custom Fedora-based immutable operating system images using the Universal Blue framework. The project builds four variants:
+Phalanx creates custom Fedora-based immutable operating system images using the Universal Blue framework. The project builds five variants:
 
 - **base**: Core system with essential packages (zsh, kitty, neovim, Active Directory integration, KDE add-ons, system utilities)
 - **awesome**: Base + Awesome WM desktop environment with custom configuration and dotfiles
+- **hyprland**: Base + Hyprland Wayland compositor with modern desktop stack (Waybar, SwayNotificationCenter, hyprlock)
 - **workstation**: Full development environment with utilities, dotfiles, Docker CE, and 1Password repository
-- **workstation-nofun**: Workstation variant (appears in workflows, build script not yet implemented)
+- **workstation-nofun**: Workstation variant with gaming packages removed (steam, lutris) for professional environments
 
 All images are built from Bazzite (gaming-focused Universal Blue variant) as the upstream base.
 
@@ -23,12 +24,17 @@ phalanx/
 │   │   └── build.sh         # Base package installation script
 │   ├── awesome/
 │   │   └── build.sh         # Awesome WM setup and dotfiles installation
-│   └── workstation/
-│       └── build.sh         # Workstation-specific package management
+│   ├── hyprland/
+│   │   └── build.sh         # Hyprland compositor and Wayland desktop setup
+│   ├── workstation/
+│   │   └── build.sh         # Workstation-specific package management
+│   └── workstation-nofun/
+│       └── build.sh         # Workstation with gaming packages removed
 ├── .github/workflows/        # GitHub Actions CI/CD workflows
 │   ├── build.yml            # Reusable build workflow template
 │   ├── build-base.yml       # Base variant build trigger
 │   ├── build-awesomewm.yml  # Awesome variant build trigger
+│   ├── build-hyprland.yml   # Hyprland variant build trigger
 │   └── build-workstation.yml # Workstation variant build trigger
 ├── files/
 │   └── logo.png             # Project logo
@@ -46,8 +52,8 @@ The project uses a single unified `Containerfile` with build-time parameterizati
 1. **Build Arguments**: 
    - `SOURCE_IMAGE`: Upstream base image (default: "bazzite")
    - `SOURCE_SUFFIX`: Hardware-specific suffixes ("", "nvidia", "asus", etc.)
-   - `SOURCE_TAG`: Version tag (default: "latest")
-   - `VARIANT`: Build variant to use ("base", "awesome", "workstation")
+   - `SOURCE_TAG`: Version tag (default: "stable")
+   - `VARIANT`: Build variant to use ("base", "awesome", "hyprland", "workstation")
 
 2. **Base FROM**: `ghcr.io/ublue-os/${SOURCE_IMAGE}${SOURCE_SUFFIX}:${SOURCE_TAG}`
 
@@ -61,17 +67,32 @@ The project uses a single unified `Containerfile` with build-time parameterizati
   - System utilities (gvfs-smb, btop)
   - KDE add-ons (kvantum, arc-kde-kvantum)
   
-- **awesome/build.sh**: 
+- **awesome/build.sh**:
   - Sources base build
   - Installs Awesome WM with full desktop stack
   - Clones and installs dotfiles from GitHub repositories (maintained as git repo in /etc/skel)
   - Includes window manager utilities (picom, rofi, nitrogen, etc.)
-  
+
+- **hyprland/build.sh**:
+  - Sources base build
+  - Enables COPR repositories (lionheartp/Hyprland, erikreider/SwayNotificationCenter, etc.)
+  - Installs Hyprland compositor with full Wayland desktop stack
+  - Includes Waybar, SwayNotificationCenter, hyprlock, hypridle, wlogout
+  - Wallpaper and theming tools (swww, wallust, Kvantum, hyprcursor)
+  - Screenshot utilities (grim, slurp, swappy)
+  - Plugin build dependencies for hyprpm customization
+  - Handles Qt version compatibility for polkit agent selection
+
 - **workstation/build.sh**:
   - Installs development utilities (git-delta, copyq, ranger, kitty, rofi components)
   - Clones and installs dotfiles to /etc/skel (non-git approach)
   - Configures 1Password repository (installation deferred to post-boot)
   - Installs Docker CE full stack (docker-ce, docker-compose, buildx)
+
+- **workstation-nofun/build.sh**:
+  - Sources workstation build for full development environment
+  - Removes gaming packages (steam, steam-devices, lutris)
+  - Designed for professional/enterprise environments
 
 ### GitHub Actions Workflows
 
@@ -84,7 +105,8 @@ The CI/CD system uses a reusable workflow pattern:
   
 - **Variant-specific workflows**:
   - `build-base.yml`: Builds base variant
-  - `build-awesomewm.yml`: Builds awesome variant  
+  - `build-awesomewm.yml`: Builds awesome variant
+  - `build-hyprland.yml`: Builds hyprland variant with matrix strategy for NVIDIA support
   - `build-workstation.yml`: Builds workstation and workstation-nofun variants with matrix strategy for NVIDIA support
 
 - **Build triggers**:
@@ -115,6 +137,15 @@ podman build -f Containerfile --build-arg VARIANT=base -t phalanx-base .
 # Build awesome variant
 podman build -f Containerfile --build-arg VARIANT=awesome -t phalanx-awesome .
 
+# Build hyprland variant
+podman build -f Containerfile --build-arg VARIANT=hyprland -t phalanx-hyprland .
+
+# Build hyprland variant with NVIDIA support
+podman build -f Containerfile \
+  --build-arg VARIANT=hyprland \
+  --build-arg SOURCE_SUFFIX=-nvidia \
+  -t phalanx-hyprland-nvidia .
+
 # Build workstation variant with NVIDIA support
 podman build -f Containerfile \
   --build-arg VARIANT=workstation \
@@ -135,13 +166,15 @@ podman build -f Containerfile \
 No specific test frameworks are configured. Manual testing involves:
 1. Building images locally
 2. Running containers to verify package installation
-3. Testing desktop environment functionality (for awesome/workstation variants)
+3. Testing desktop environment functionality (for awesome/hyprland/workstation variants)
 
 ### Deployment
 
 Images are automatically pushed to GitHub Container Registry (GHCR) at:
 - `ghcr.io/syndr/phalanx-base:latest`
 - `ghcr.io/syndr/phalanx-awesome:latest`
+- `ghcr.io/syndr/phalanx-hyprland:latest`
+- `ghcr.io/syndr/phalanx-hyprland-nvidia:latest`
 - `ghcr.io/syndr/phalanx-workstation:latest`
 - `ghcr.io/syndr/phalanx-workstation-nvidia:latest`
 - `ghcr.io/syndr/phalanx-workstation-nofun:latest`
@@ -183,6 +216,15 @@ cosign verify --key cosign.pub ghcr.io/syndr/phalanx-base:latest
 - Configured 1Password repository for post-boot installation
 - Implemented dotfiles installation for new user accounts
 - Added graceful error handling for packages requiring runtime services
+
+### Hyprland Variant (2025-12)
+- Added Hyprland Wayland compositor variant with full desktop environment
+- COPR repositories for latest Hyprland packages (lionheartp/Hyprland, etc.)
+- Complete desktop stack: Waybar, SwayNotificationCenter, hyprlock, hypridle
+- Wallpaper and theming: swww, wallust, Kvantum, hyprcursor
+- Plugin build dependencies included for hyprpm customization
+- Qt version detection for polkit agent compatibility (NVIDIA images)
+- Unified with main Containerfile build system
 
 ### Build Improvements
 - Fixed ARG variable expansion in Containerfile (must be declared after FROM)
