@@ -22,6 +22,9 @@ copr_repos=(
     erikreider/SwayNotificationCenter
     errornointernet/packages
     tofik/nwg-shell
+
+    # For swww
+    alebastr/sway-extras
 )
 
 # need to add: swww, hyprland-qtutils
@@ -37,7 +40,7 @@ hyprland_packages=(
   kvantum qt5ct qt6ct qt6-qtsvg nwg-look hyprcursor hyprland-qt-support
 
   # Wallpaper and color
-  wallust
+  swww wallust
 
   # Desktop components
   waybar SwayNotificationCenter nwg-displays
@@ -89,6 +92,11 @@ hyprland_plugin_build_deps=(
   pixman-devel
   cairo-devel
   pango-devel
+
+  # OpenGL/GLES development
+  mesa-libGL-devel
+  mesa-libGLES-devel
+  mesa-libEGL-devel
 )
 
 # Check for -v argument in $@
