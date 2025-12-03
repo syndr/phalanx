@@ -11,7 +11,7 @@ base_packages=(
   iptables-nft
 
   # System utilities
-  gvfs-smb btop
+  gvfs-smb btop cloud-utils-growpart
 
   # KDE add-ons
   kvantum kvantum-data arc-kde-kvantum

@@ -31,19 +31,20 @@ copr_repos=(
 # Package list for Hyprland configuration
 hyprland_packages=(
   # Core Hyprland (polkit agent added conditionally below due to Qt conflicts on NVIDIA)
-  hyprland hyprland-plugins
+  hyprland
 
   # Terminal and launchers
   kitty wlogout
 
   # Theming and appearance
   kvantum qt5ct qt6ct qt6-qtsvg nwg-look hyprcursor hyprland-qt-support
+  hyprland-guiutils
 
   # Wallpaper and color
   swww wallust
 
   # Desktop components
-  waybar SwayNotificationCenter nwg-displays
+  waybar SwayNotificationCenter nwg-displays quickshell
 
   # Screen locking and power management
   hyprlock hypridle
@@ -76,27 +77,27 @@ hyprland_plugin_build_deps=(
 
   # Hyprland development headers
   #hyprland-devel
-  hyprwayland-scanner-devel
+  hyprwayland-scanner-devel hyprlang-devel hyprcursor-devel
+  hyprutils-devel hyprgraphics-devel
 
   # Wayland development
-  wayland-devel
-  wayland-protocols-devel
+  wayland-devel wayland-protocols-devel
 
   # Graphics development
-  libX11-devel
+  libX11-devel aquamarine-devel
 
   # Input and display
-  libxcb-devel
+  libxcb-devel libxkbcommon-devel libXcursor-devel libinput-devel
+  xcb-util-wm-devel xcb-util-errors-devel
+
+  # Misc libraries
+  re2-devel libuuid-devel tomlplusplus-devel
 
   # Rendering libraries
-  pixman-devel
-  cairo-devel
-  pango-devel
+  pixman-devel cairo-devel pango-devel
 
   # OpenGL/GLES development
-  mesa-libGL-devel
-  mesa-libGLES-devel
-  mesa-libEGL-devel
+  mesa-libGL-devel mesa-libGLES-devel mesa-libEGL-devel mesa-libgbm-devel
 )
 
 # Check for -v argument in $@
