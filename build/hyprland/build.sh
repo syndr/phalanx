@@ -31,7 +31,7 @@ copr_repos=(
 # Package list for Hyprland configuration
 hyprland_packages=(
   # Core Hyprland (polkit agent added conditionally below due to Qt conflicts on NVIDIA)
-  hyprland
+  hyprland-git hyprland-git-uwsm
 
   # Terminal and launchers
   kitty wlogout
