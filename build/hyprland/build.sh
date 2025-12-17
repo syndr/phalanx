@@ -71,6 +71,10 @@ hyprland_packages=(
 )
 
 # Development packages for hyprpm plugin building
+# NOTE: These are NOT installed on the base image due to gcc version conflicts.
+# Instead, use the hyprland-build distrobox container for plugin compilation.
+# Run: ujust setup-hyprland-build create
+# Then: ujust setup-hyprland-build enter
 hyprland_plugin_build_deps=(
   # Build tools
   meson cmake gcc-c++ ninja-build
@@ -137,6 +141,11 @@ fi
 echo "Installing Hyprland and dependencies"
 rpm-ostree install "${hyprland_packages[@]}"
 
-echo "Installing plugin build dependencies (for hyprpm)"
-rpm-ostree install "${hyprland_plugin_build_deps[@]}"
+# NOTE: Plugin build dependencies are NOT installed here due to gcc version conflicts
+# with the base image. Instead, users should use the hyprland-build distrobox container.
+# Run: ujust setup-hyprland-build create
+echo "Skipping plugin build dependencies (use hyprland-build distrobox instead)"
 
+# Install ujust recipe for hyprland plugin building
+echo "Installing hyprland-build ujust recipe"
+install -Dm644 justfiles/60-custom.just /usr/share/ublue-os/just/60-custom.just
