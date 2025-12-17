@@ -148,4 +148,5 @@ echo "Skipping plugin build dependencies (use hyprland-build distrobox instead)"
 
 # Install ujust recipe for hyprland plugin building
 echo "Installing hyprland-build ujust recipe"
-install -Dm644 justfiles/60-custom.just /usr/share/ublue-os/just/60-custom.just
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+install -Dm644 "${SCRIPT_DIR}/justfiles/60-custom.just" /usr/share/ublue-os/just/60-custom.just
