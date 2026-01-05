@@ -19,20 +19,19 @@ setup-hyprland-build ACTION="":
         "alebastr/sway-extras"
     )
 
-    # Core hyprland packages needed for hyprpm
-    HYPRLAND_PACKAGES="hyprland hyprutils hyprgraphics hyprlang aquamarine"
+    # Build dependencies from Fedora repos (installed during distrobox creation)
+    FEDORA_BUILD_PACKAGES="meson cmake gcc-c++ ninja-build git cpio"
+    FEDORA_BUILD_PACKAGES+=" wayland-devel wayland-protocols-devel"
+    FEDORA_BUILD_PACKAGES+=" libX11-devel libxcb-devel libxkbcommon-devel libXcursor-devel libinput-devel"
+    FEDORA_BUILD_PACKAGES+=" xcb-util-wm-devel xcb-util-errors-devel"
+    FEDORA_BUILD_PACKAGES+=" re2-devel libuuid-devel tomlplusplus-devel"
+    FEDORA_BUILD_PACKAGES+=" pixman-devel cairo-devel pango-devel muParser-devel"
+    FEDORA_BUILD_PACKAGES+=" mesa-libGL-devel mesa-libGLES-devel mesa-libEGL-devel mesa-libgbm-devel"
 
-    # Build dependencies for hyprpm plugins
-    BUILD_PACKAGES="meson cmake gcc-c++ ninja-build git cpio"
-    BUILD_PACKAGES+=" hyprwayland-scanner-devel hyprlang-devel hyprcursor-devel"
-    BUILD_PACKAGES+=" hyprutils-devel hyprgraphics-devel"
-    BUILD_PACKAGES+=" wayland-devel wayland-protocols-devel"
-    BUILD_PACKAGES+=" libX11-devel aquamarine-devel"
-    BUILD_PACKAGES+=" libxcb-devel libxkbcommon-devel libXcursor-devel libinput-devel"
-    BUILD_PACKAGES+=" xcb-util-wm-devel xcb-util-errors-devel"
-    BUILD_PACKAGES+=" re2-devel libuuid-devel tomlplusplus-devel"
-    BUILD_PACKAGES+=" pixman-devel cairo-devel pango-devel"
-    BUILD_PACKAGES+=" mesa-libGL-devel mesa-libGLES-devel mesa-libEGL-devel mesa-libgbm-devel"
+    # Hyprland packages from COPR repos (installed after COPR is enabled)
+    COPR_PACKAGES="hyprland hyprutils hyprgraphics hyprlang aquamarine"
+    COPR_PACKAGES+=" hyprwayland-scanner-devel hyprlang-devel hyprcursor-devel"
+    COPR_PACKAGES+=" hyprutils-devel hyprgraphics-devel aquamarine-devel hyprwire-devel"
 
     case "{{ ACTION }}" in
         create)
@@ -40,10 +39,11 @@ setup-hyprland-build ACTION="":
                 echo "Container already exists. Use 'ujust setup-hyprland-build enter' or 'ujust setup-hyprland-build remove'"
                 exit 1
             fi
+
             echo "Creating hyprland-build distrobox with Fedora ${FEDORA_VERSION}..."
             distrobox create --name "$CONTAINER_NAME" --image "$IMAGE" --yes \
                 --volume "/home/linuxbrew:/home/linuxbrew:ro" \
-                --additional-packages "dnf-plugins-core $BUILD_PACKAGES"
+                --additional-packages "dnf-plugins-core $FEDORA_BUILD_PACKAGES"
 
             # Enable COPR repos and install hyprland packages
             echo "Enabling COPR repositories..."
@@ -52,8 +52,8 @@ setup-hyprland-build ACTION="":
                 distrobox enter --no-workdir "$CONTAINER_NAME" -- sudo dnf copr enable -y "$repo"
             done
 
-            echo "Installing hyprland packages..."
-            distrobox enter --no-workdir "$CONTAINER_NAME" -- sudo dnf install -y --skip-unavailable $HYPRLAND_PACKAGES
+            echo "Installing Hyprland packages from COPR..."
+            distrobox enter --no-workdir "$CONTAINER_NAME" -- sudo dnf install -y --skip-unavailable $COPR_PACKAGES
 
             # Create /var/home symlink for Fedora Atomic compatibility
             # hyprpm stores state with absolute paths from host (/var/home/...)
@@ -74,20 +74,88 @@ setup-hyprland-build ACTION="":
         remove)
             distrobox rm "$CONTAINER_NAME" --force
             ;;
+        init)
+            # Import host's hyprpm config into container
+            # Copies state.toml files so container knows about existing repos
+            echo "Importing host's hyprpm config into container..."
+            USERNAME=$(whoami)
+            HOST_CACHE="/var/cache/hyprpm/${USERNAME}"
+            CONTAINER_CACHE="/var/cache/hyprpm/${USERNAME}"
+
+            # Check if host has hyprpm cache
+            if ! test -d "$HOST_CACHE"; then
+                echo "No hyprpm cache found on host at $HOST_CACHE"
+                exit 1
+            fi
+
+            # Check if container exists
+            if ! podman container exists "$CONTAINER_NAME"; then
+                echo "Error: Container not found. Create it first with: ujust setup-hyprland-build create"
+                exit 1
+            fi
+
+            # Start container if not running
+            if ! podman container inspect "$CONTAINER_NAME" --format "{{{{.State.Running}}}}" 2>/dev/null | grep -q "true"; then
+                echo "Starting container..."
+                podman start "$CONTAINER_NAME" > /dev/null
+            fi
+
+            # Create temp directory with state files only (no .so files needed)
+            rm -rf /tmp/hyprpm-init
+            mkdir -p /tmp/hyprpm-init
+
+            # Copy global state if exists
+            if test -f "$HOST_CACHE/state.toml"; then
+                cp "$HOST_CACHE/state.toml" /tmp/hyprpm-init/
+            fi
+
+            # Copy plugin repo configs (state.toml files, not .so files)
+            PLUGINS=""
+            for plugin_dir in "$HOST_CACHE"/*/; do
+                plugin_name=$(basename "$plugin_dir")
+                if test "$plugin_name" = "headersRoot"; then continue; fi
+                if test -f "$plugin_dir/state.toml"; then
+                    mkdir -p "/tmp/hyprpm-init/$plugin_name"
+                    cp "$plugin_dir/state.toml" "/tmp/hyprpm-init/$plugin_name/"
+                    PLUGINS="$PLUGINS $plugin_name"
+                fi
+            done
+
+            if test -z "$PLUGINS"; then
+                echo "No plugin configs found on host."
+                rm -rf /tmp/hyprpm-init
+                exit 1
+            fi
+
+            # Create cache directory in container and copy configs
+            echo "Creating container cache directory..."
+            podman exec "$CONTAINER_NAME" sudo mkdir -p "$CONTAINER_CACHE"
+
+            echo "Copying plugin configs to container..."
+            podman cp "/tmp/hyprpm-init/." "${CONTAINER_NAME}:${CONTAINER_CACHE}/"
+
+            # Fix ownership in container (hyprpm expects root:root)
+            podman exec "$CONTAINER_NAME" sudo chown -R root:root "$CONTAINER_CACHE"
+
+            rm -rf /tmp/hyprpm-init
+
+            echo ""
+            echo "Done! Imported configs for:$PLUGINS"
+            echo ""
+            echo "Now enter the container and run 'hyprpm update' to rebuild all plugins:"
+            echo "  ujust setup-hyprland-build enter"
+            echo "  hyprpm update"
+            ;;
         sync|sync-force)
-            # Sync plugins built in container to host's hyprpm cache
+            # Sync hyprpm cache (headers, state, plugins) from container to host
             FORCE_MODE=false
             if test "{{ ACTION }}" = "sync-force"; then
                 FORCE_MODE=true
-                echo "⚠️  Force mode: Will overwrite existing plugins"
-                echo "   Make sure Hyprland is not running or plugins are unloaded!"
-                echo ""
-                echo "Currently loaded plugins on host:"
-                hyprpm list 2>/dev/null | grep -E "(Plugin|enabled: true)" | head -20 || echo "   (could not get plugin list)"
+                echo "Force mode: Will overwrite existing files"
                 echo ""
             fi
 
-            echo "Syncing hyprpm plugins from container to host..."
+            echo "Syncing hyprpm cache from container to host..."
             USERNAME=$(whoami)
             CONTAINER_CACHE="/var/cache/hyprpm/${USERNAME}"
             HOST_CACHE="/var/cache/hyprpm/${USERNAME}"
@@ -104,65 +172,80 @@ setup-hyprland-build ACTION="":
                 podman start "$CONTAINER_NAME" > /dev/null
             fi
 
-            # Check if container has any plugins
+            # Check if container has hyprpm cache
             if ! podman exec "$CONTAINER_NAME" test -d "$CONTAINER_CACHE"; then
-                echo "No plugins found in container. Build some first with: hyprpm add <url>"
+                echo "No hyprpm cache found in container. Run 'hyprpm update' first."
                 exit 1
             fi
 
-            # Copy plugins from container to temp location
-            echo "Copying plugins from container..."
+            # Copy entire cache from container to temp location
+            echo "Copying cache from container..."
             rm -rf /tmp/hyprpm-sync
             mkdir -p /tmp/hyprpm-sync
             podman cp "${CONTAINER_NAME}:${CONTAINER_CACHE}/." "/tmp/hyprpm-sync/"
+
+            # Ensure host cache directory exists
             sudo mkdir -p "$HOST_CACHE"
 
-            # Sync each plugin directory individually (skip config files)
+            # Sync headers and global state (always update these)
+            if test -d /tmp/hyprpm-sync/headersRoot; then
+                echo "  Syncing headers..."
+                sudo rm -rf "$HOST_CACHE/headersRoot"
+                sudo cp -r /tmp/hyprpm-sync/headersRoot "$HOST_CACHE/"
+                # Strip Requires line from hyprland.pc - host doesn't have -devel packages
+                # but hyprpm just needs include paths, not dependency resolution
+                sudo sed -i '/^Requires:/d' "$HOST_CACHE/headersRoot/share/pkgconfig/hyprland.pc"
+            fi
+            if test -f /tmp/hyprpm-sync/state.toml; then
+                echo "  Syncing global state..."
+                sudo cp /tmp/hyprpm-sync/state.toml "$HOST_CACHE/"
+            fi
+
+            # Sync plugin directories
             SKIPPED=""
             ADDED=""
             UPDATED=""
             for plugin_dir in /tmp/hyprpm-sync/*/; do
                 plugin_name=$(basename "$plugin_dir")
-                # Skip non-plugin directories and config files
+                # Skip headers (already handled above)
                 if test "$plugin_name" = "headersRoot"; then continue; fi
 
                 if test -d "$HOST_CACHE/$plugin_name"; then
                     if $FORCE_MODE; then
-                        echo "  Updating: $plugin_name"
-                        # Only copy .so files, preserve host's state.toml
-                        for so_file in "$plugin_dir"*.so; do
-                            if test -f "$so_file"; then
-                                sudo cp "$so_file" "$HOST_CACHE/$plugin_name/"
-                            fi
-                        done
+                        echo "  Updating plugin: $plugin_name"
+                        sudo rm -rf "$HOST_CACHE/$plugin_name"
+                        sudo cp -r "$plugin_dir" "$HOST_CACHE/"
                         UPDATED="$UPDATED $plugin_name"
                     else
                         echo "  Skipping existing: $plugin_name (use sync-force to update)"
                         SKIPPED="$SKIPPED $plugin_name"
                     fi
                 else
-                    echo "  Adding new: $plugin_name"
+                    echo "  Adding plugin: $plugin_name"
                     sudo cp -r "$plugin_dir" "$HOST_CACHE/"
                     ADDED="$ADDED $plugin_name"
                 fi
             done
 
+            # Set proper ownership (hyprpm expects root:root)
+            sudo chown -R root:root "$HOST_CACHE"
+
             rm -rf /tmp/hyprpm-sync
 
             echo ""
-            echo "Done! Plugins synced to ${HOST_CACHE}"
+            echo "Done! Cache synced to ${HOST_CACHE}"
             if test -n "$ADDED"; then
-                echo "  New plugins added:$ADDED"
-                echo "  Enable them with: hyprpm enable <plugin-name>"
+                echo "  New plugins:$ADDED"
+                echo "  Enable with: hyprpm enable <plugin-name>"
             fi
             if test -n "$UPDATED"; then
-                echo "  Plugins updated:$UPDATED"
-                echo "  Reload with: hyprpm reload"
+                echo "  Updated plugins:$UPDATED"
             fi
             if test -n "$SKIPPED"; then
-                echo "  Skipped (already exist):$SKIPPED"
-                echo "  To update these, use: ujust setup-hyprland-build sync-force"
+                echo "  Skipped (use sync-force to update):$SKIPPED"
             fi
+            echo ""
+            echo "Run 'hyprpm reload' to load plugins."
             ;;
         *)
             echo "Hyprland Build Environment for plugin compilation"
@@ -172,23 +255,25 @@ setup-hyprland-build ACTION="":
             echo "Actions:"
             echo "  create      - Create the build container (Fedora ${FEDORA_VERSION})"
             echo "  enter       - Enter the build container"
-            echo "  sync        - Copy NEW plugins from container to host (safe)"
-            echo "  sync-force  - Update ALL plugins (overwrites existing .so files)"
+            echo "  init        - Import host's plugin configs into container"
+            echo "  sync        - Copy headers, state, and NEW plugins to host"
+            echo "  sync-force  - Copy everything, overwriting existing plugins"
             echo "  remove      - Remove the build container"
             echo ""
             echo "Workflow for new plugins:"
             echo "  1. ujust setup-hyprland-build create"
             echo "  2. ujust setup-hyprland-build enter"
-            echo "  3. hyprpm add <plugin-url>  # inside container"
+            echo "  3. hyprpm update && hyprpm add <plugin-url>"
             echo "  4. exit"
             echo "  5. ujust setup-hyprland-build sync"
-            echo "  6. hyprpm enable <plugin-name>"
+            echo "  6. hyprpm enable <plugin> && hyprpm reload"
             echo ""
-            echo "Workflow for updating plugins (after Hyprland update):"
-            echo "  1. ujust setup-hyprland-build enter"
-            echo "  2. hyprpm update  # inside container"
-            echo "  3. exit"
-            echo "  4. ujust setup-hyprland-build sync-force"
-            echo "  5. hyprpm reload"
+            echo "Workflow for rebuilding (after Hyprland update):"
+            echo "  1. ujust setup-hyprland-build init   # import existing plugins"
+            echo "  2. ujust setup-hyprland-build enter"
+            echo "  3. hyprpm update                     # rebuild all"
+            echo "  4. exit"
+            echo "  5. ujust setup-hyprland-build sync-force"
+            echo "  6. hyprpm reload"
             ;;
     esac
