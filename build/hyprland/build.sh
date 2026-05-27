@@ -37,8 +37,7 @@ hyprland_packages=(
   kitty wlogout
 
   # Theming and appearance
-  kvantum qt5ct qt6ct qt6-qtsvg nwg-look hyprcursor hyprland-qt-support
-  hyprland-guiutils
+  kvantum qt5ct qt6ct qt6-qtsvg nwg-look hyprcursor hyprland-guiutils
 
   # Wallpaper and color
   swww wallust
@@ -127,15 +126,17 @@ for repo in "${copr_repos[@]}"; do
   dnf5 copr enable -y "$repo"
 done
 
-# Add polkit agent - hyprpolkitagent requires Qt 6.9 but NVIDIA images ship Qt 6.10
-# Base bazzite image includes polkit-kde, so we fall back to that when hyprpolkitagent won't work
+# Add Qt-coupled Hyprland helpers only when the base image Qt is new enough.
+# bazzite-nvidia can lag Fedora's Qt updates, and rpm-ostree cannot layer
+# packages that require replacing qt6-qtbase from the base commit.
 QT_VERSION=$(rpm -q qt6-qtbase --queryformat '%{VERSION}' 2>/dev/null || echo "unknown")
 echo "Detected Qt version: $QT_VERSION"
-if [[ "$QT_VERSION" == 6.10* ]]; then
-  echo "Qt 6.10 detected - using polkit-kde from base image (hyprpolkitagent requires Qt 6.9)"
+if [[ "$QT_VERSION" == "unknown" ]] ||
+   [[ "$(printf '%s\n' "6.11" "$QT_VERSION" | sort -V | head -n1)" != "6.11" ]]; then
+  echo "Qt $QT_VERSION is below 6.11 - using polkit-kde from the base image and skipping hyprland-qt-support"
 else
-  echo "Using hyprpolkitagent"
-  hyprland_packages+=(hyprpolkitagent)
+  echo "Using Hyprland Qt support packages"
+  hyprland_packages+=(hyprland-qt-support hyprpolkitagent)
 fi
 
 echo "Installing Hyprland and dependencies"
