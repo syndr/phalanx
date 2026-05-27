@@ -45,6 +45,9 @@ hyprland_packages=(
   # Desktop components
   waybar SwayNotificationCenter nwg-displays quickshell
 
+  # Lan Mouse direct binary runtime deps (GTK/libadwaita frontend plus X11 fallback/input libraries)
+  libadwaita gtk4 libX11 libXtst
+
   # Screen locking and power management
   hyprlock hypridle
 
@@ -60,7 +63,7 @@ hyprland_packages=(
   network-manager-applet gvfs gvfs-mtp
   inxi fastfetch loupe mousepad qalculate-gtk yad
 
-  # Scripting and helper tools
+  # Scripting and helper tools (curl/jq are also used to resolve the Lan Mouse GitHub release)
   bc curl findutils gawk git ImageMagick jq openssl unzip wget2
   wl-clipboard cliphist xdg-user-dirs xdg-utils
   python3-requests python3-pip python3-pyquery
@@ -115,6 +118,7 @@ else
 fi
 
 RELEASE="$(rpm -E %fedora)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "Running base configuration for Fedora $RELEASE"
 source ../base/build.sh
@@ -142,6 +146,9 @@ fi
 echo "Installing Hyprland and dependencies"
 rpm-ostree install "${hyprland_packages[@]}"
 
+echo "Installing Lan Mouse"
+"${SCRIPT_DIR}/install-lan-mouse.sh"
+
 # NOTE: Plugin build dependencies are NOT installed here due to gcc version conflicts
 # with the base image. Instead, users should use the hyprland-build distrobox container.
 # Run: ujust setup-hyprland-build create
@@ -149,5 +156,4 @@ echo "Skipping plugin build dependencies (use hyprland-build distrobox instead)"
 
 # Install ujust recipe for hyprland plugin building
 echo "Installing hyprland-build ujust recipe"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 install -Dm644 "${SCRIPT_DIR}/justfiles/60-custom.just" /usr/share/ublue-os/just/60-custom.just
