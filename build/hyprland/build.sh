@@ -37,14 +37,16 @@ hyprland_packages=(
   kitty wlogout
 
   # Theming and appearance
-  kvantum qt5ct qt6ct qt6-qtsvg nwg-look hyprcursor hyprland-qt-support
-  hyprland-guiutils
+  kvantum qt5ct qt6ct qt6-qtsvg nwg-look hyprcursor hyprland-guiutils
 
   # Wallpaper and color
   swww wallust
 
   # Desktop components
   waybar SwayNotificationCenter nwg-displays quickshell
+
+  # Lan Mouse direct binary runtime deps (GTK/libadwaita frontend plus X11 fallback/input libraries)
+  libadwaita gtk4 libX11 libXtst
 
   # Screen locking and power management
   hyprlock hypridle
@@ -61,7 +63,7 @@ hyprland_packages=(
   network-manager-applet gvfs gvfs-mtp
   inxi fastfetch loupe mousepad qalculate-gtk yad
 
-  # Scripting and helper tools
+  # Scripting and helper tools (curl/jq are also used to resolve the Lan Mouse GitHub release)
   bc curl findutils gawk git ImageMagick jq openssl unzip wget2
   wl-clipboard cliphist xdg-user-dirs xdg-utils
   python3-requests python3-pip python3-pyquery
@@ -116,6 +118,7 @@ else
 fi
 
 RELEASE="$(rpm -E %fedora)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "Running base configuration for Fedora $RELEASE"
 source ../base/build.sh
@@ -127,19 +130,24 @@ for repo in "${copr_repos[@]}"; do
   dnf5 copr enable -y "$repo"
 done
 
-# Add polkit agent - hyprpolkitagent requires Qt 6.9 but NVIDIA images ship Qt 6.10
-# Base bazzite image includes polkit-kde, so we fall back to that when hyprpolkitagent won't work
+# Add Qt-coupled Hyprland helpers only when the base image Qt is new enough.
+# bazzite-nvidia can lag Fedora's Qt updates, and rpm-ostree cannot layer
+# packages that require replacing qt6-qtbase from the base commit.
 QT_VERSION=$(rpm -q qt6-qtbase --queryformat '%{VERSION}' 2>/dev/null || echo "unknown")
 echo "Detected Qt version: $QT_VERSION"
-if [[ "$QT_VERSION" == 6.10* ]]; then
-  echo "Qt 6.10 detected - using polkit-kde from base image (hyprpolkitagent requires Qt 6.9)"
+if [[ "$QT_VERSION" == "unknown" ]] ||
+   [[ "$(printf '%s\n' "6.11" "$QT_VERSION" | sort -V | head -n1)" != "6.11" ]]; then
+  echo "Qt $QT_VERSION is below 6.11 - using polkit-kde from the base image and skipping hyprland-qt-support"
 else
-  echo "Using hyprpolkitagent"
-  hyprland_packages+=(hyprpolkitagent)
+  echo "Using Hyprland Qt support packages"
+  hyprland_packages+=(hyprland-qt-support hyprpolkitagent)
 fi
 
 echo "Installing Hyprland and dependencies"
 rpm-ostree install "${hyprland_packages[@]}"
+
+echo "Installing Lan Mouse"
+"${SCRIPT_DIR}/install-lan-mouse.sh"
 
 # NOTE: Plugin build dependencies are NOT installed here due to gcc version conflicts
 # with the base image. Instead, users should use the hyprland-build distrobox container.
@@ -148,5 +156,4 @@ echo "Skipping plugin build dependencies (use hyprland-build distrobox instead)"
 
 # Install ujust recipe for hyprland plugin building
 echo "Installing hyprland-build ujust recipe"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 install -Dm644 "${SCRIPT_DIR}/justfiles/60-custom.just" /usr/share/ublue-os/just/60-custom.just
