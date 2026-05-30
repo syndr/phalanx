@@ -1,5 +1,7 @@
 #!/bin/bash
 # Install the newest non-draft Lan Mouse GitHub release, including prereleases.
+# Install under non-RPM paths so the distro lan-mouse RPM can be layered without
+# rpm-ostree checkout collisions on /usr/bin/lan-mouse and related files.
 
 if [[ "${TRACE:-0}" -ne 0 ]]; then
   set -ouex pipefail
@@ -11,6 +13,14 @@ api_url="https://api.github.com/repos/feschber/lan-mouse/releases"
 asset_name=""
 release_json=""
 tmpdir=""
+binary_path="/usr/local/bin/lan-mouse"
+binary_install_path="/var/usrlocal/bin/lan-mouse"
+desktop_install_path="/var/usrlocal/share/applications/de.feschber.LanMouse.desktop"
+firewalld_path="/etc/firewalld/services/lan-mouse.xml"
+icon_name="de.feschber.LanMouse"
+icon_theme_dir="/var/usrlocal/share/icons/hicolor"
+icon_install_path="/var/usrlocal/share/icons/hicolor/scalable/apps/${icon_name}.svg"
+systemd_user_path="/etc/systemd/user/lan-mouse.service"
 
 case "$(uname -m)" in
   x86_64)
@@ -31,6 +41,14 @@ cleanup() {
   fi
 }
 trap cleanup EXIT
+
+remove_unowned_path() {
+  local path="$1"
+
+  if [[ -e "$path" || -L "$path" ]] && ! rpm -q --whatprovides "$path" >/dev/null 2>&1; then
+    rm -f "$path"
+  fi
+}
 
 tmpdir="$(mktemp -d)"
 release_json="${tmpdir}/releases.json"
@@ -64,30 +82,52 @@ else
   exit 1
 fi
 
-install -Dm0755 "${tmpdir}/lan-mouse" /usr/bin/lan-mouse
+install -Dm0755 "${tmpdir}/lan-mouse" "$binary_install_path"
 
 raw_base="https://raw.githubusercontent.com/feschber/lan-mouse/${selected_tag}"
+
+remove_unowned_path /usr/bin/lan-mouse
+remove_unowned_path /usr/share/applications/de.feschber.LanMouse.desktop
+remove_unowned_path /usr/share/icons/hicolor/scalable/apps/de.feschber.LanMouse.svg
+remove_unowned_path /usr/lib/firewalld/services/lan-mouse.xml
+remove_unowned_path /usr/lib/systemd/user/lan-mouse.service
 
 curl --fail --location --retry 5 --retry-all-errors --silent --show-error \
   "${raw_base}/de.feschber.LanMouse.desktop" \
   --output "${tmpdir}/de.feschber.LanMouse.desktop"
-install -Dm0644 "${tmpdir}/de.feschber.LanMouse.desktop" /usr/share/applications/de.feschber.LanMouse.desktop
+cp "${tmpdir}/de.feschber.LanMouse.desktop" "${tmpdir}/phalanx-lan-mouse.desktop"
+sed -i \
+  -e "/^DBusActivatable=/d" \
+  -e "s#^Exec=.*#Exec=${binary_path}#" \
+  -e "s#^TryExec=.*#TryExec=${binary_path}#" \
+  -e "s#^Icon=.*#Icon=${icon_name}#" \
+  "${tmpdir}/phalanx-lan-mouse.desktop"
+grep -q "^Exec=${binary_path}$" "${tmpdir}/phalanx-lan-mouse.desktop"
+grep -q "^Icon=${icon_name}$" "${tmpdir}/phalanx-lan-mouse.desktop"
+install -Dm0644 "${tmpdir}/phalanx-lan-mouse.desktop" "$desktop_install_path"
 
 curl --fail --location --retry 5 --retry-all-errors --silent --show-error \
   "${raw_base}/lan-mouse-gtk/resources/de.feschber.LanMouse.svg" \
   --output "${tmpdir}/de.feschber.LanMouse.svg"
-install -Dm0644 "${tmpdir}/de.feschber.LanMouse.svg" /usr/share/icons/hicolor/scalable/apps/de.feschber.LanMouse.svg
+install -Dm0644 "${tmpdir}/de.feschber.LanMouse.svg" "$icon_install_path"
+if [[ -f /usr/share/icons/hicolor/index.theme ]]; then
+  install -Dm0644 /usr/share/icons/hicolor/index.theme "${icon_theme_dir}/index.theme"
+fi
 
 curl --fail --location --retry 5 --retry-all-errors --silent --show-error \
   "${raw_base}/firewall/lan-mouse.xml" \
   --output "${tmpdir}/lan-mouse.xml"
-install -Dm0644 "${tmpdir}/lan-mouse.xml" /usr/lib/firewalld/services/lan-mouse.xml
+install -Dm0644 "${tmpdir}/lan-mouse.xml" "$firewalld_path"
 
 curl --fail --location --retry 5 --retry-all-errors --silent --show-error \
   "${raw_base}/service/lan-mouse.service" \
   --output "${tmpdir}/lan-mouse.service"
-install -Dm0644 "${tmpdir}/lan-mouse.service" /usr/lib/systemd/user/lan-mouse.service
+cp "${tmpdir}/lan-mouse.service" "${tmpdir}/phalanx-lan-mouse.service"
+sed -i -E "s#^(ExecStart=)(/usr/bin/)?lan-mouse($|[[:space:]]+)#\\1${binary_path}\\3#" \
+  "${tmpdir}/phalanx-lan-mouse.service"
+grep -q "^ExecStart=${binary_path}" "${tmpdir}/phalanx-lan-mouse.service"
+install -Dm0644 "${tmpdir}/phalanx-lan-mouse.service" "$systemd_user_path"
 
 if command -v gtk-update-icon-cache >/dev/null 2>&1; then
-  gtk-update-icon-cache -q /usr/share/icons/hicolor || true
+  gtk-update-icon-cache -q "$icon_theme_dir" || true
 fi
