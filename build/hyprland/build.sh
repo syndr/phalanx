@@ -45,7 +45,7 @@ hyprland_packages=(
   # Desktop components
   waybar SwayNotificationCenter nwg-displays quickshell
 
-  # Lan Mouse direct binary runtime deps (GTK/libadwaita frontend plus X11 fallback/input libraries)
+  # Lan Mouse GitHub binary runtime deps (installed under non-RPM paths to avoid RPM collisions)
   libadwaita gtk4 libX11 libXtst
 
   # Screen locking and power management
