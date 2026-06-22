@@ -136,6 +136,7 @@ jobs:
       # Build image using Buildah action
       - name: Build Image
         id: build_image
+        # Node 24 compatibility until a new stable tag includes dd3579c
         uses: redhat-actions/buildah-build@dd3579cfa2a4bbd4d78ea54d724d895cdb4617c1
         with:
           containerfiles: |
@@ -160,8 +161,10 @@ jobs:
           string: ${{ env.IMAGE_REGISTRY }}
 
       - name: Login to GitHub Container Registry
+        env:
+          GHCR_TOKEN: ${{ github.token }}
         run: |
-          echo "${{ github.token }}" | buildah login --username "${{ github.actor }}" --password-stdin ghcr.io
+          echo "${GHCR_TOKEN}" | buildah login --username "${{ github.actor }}" --password-stdin ghcr.io
 
       - name: Push Image to GHCR
         id: push
@@ -171,8 +174,10 @@ jobs:
           IMAGE="${{ steps.build_image.outputs.image }}"
           REGISTRY="${{ steps.registry_case.outputs.lowercase }}"
           DIGEST=""
+          TAGS_RAW="${{ steps.build_image.outputs.tags }}"
+          read -r -a TAGS <<< "${TAGS_RAW}"
 
-          for TAG in ${{ steps.build_image.outputs.tags }}; do
+          for TAG in "${TAGS[@]}"; do
             DESTINATION="docker://${REGISTRY}/${IMAGE}:${TAG}"
             SOURCE="${IMAGE}:${TAG}"
             ATTEMPT=1
