@@ -35,6 +35,9 @@ echo "Creating 1Password CLI sysusers configuration"
 # its files are owned by a valid user-level GID rather than a system GID under 1000.
 mkdir -p /usr/lib/sysusers.d
 echo "g onepassword-cli 11005 -" > /usr/lib/sysusers.d/10-1password-cli.conf
+# Force materialization of the group in /usr/lib/group during image compilation
+# so that the offline rpm-ostree package layerer on the host can resolve the group owner of /usr/bin/op.
+echo "onepassword-cli:x:11005:" >> /usr/lib/group
 
 echo "Adding 1Password repository"
 # Add 1Password official RPM repository
