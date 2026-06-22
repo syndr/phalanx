@@ -162,70 +162,30 @@ jobs:
           string: ${{ env.IMAGE_REGISTRY }}
 
       - name: Login to GitHub Container Registry
-        env:
-          GHCR_TOKEN: ${{ github.token }}
-        run: |
-          echo "${GHCR_TOKEN}" | buildah login --username "${{ github.actor }}" --password-stdin ghcr.io
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Push Image to GHCR
+        uses: Wandalen/wretry.action@v3
         id: push
-        shell: bash
-        run: |
-          set -euo pipefail
-          IMAGE="${{ steps.build_image.outputs.image }}"
-          REGISTRY="${{ steps.registry_case.outputs.lowercase }}"
-          MAX_ATTEMPTS=10
-          DIGEST=""
-          TAGS_RAW="${{ steps.build_image.outputs.tags }}"
-          # buildah-build exposes tags as a whitespace-delimited string.
-          if [[ "${TAGS_RAW}" == *","* ]]; then
-            echo "Unexpected comma-delimited tags format: ${TAGS_RAW}" >&2
-            exit 1
-          fi
-          mapfile -t TAGS < <(printf '%s\n' "${TAGS_RAW}" | tr ' ' '\n' | sed '/^$/d')
-          if (( ${#TAGS[@]} == 0 )); then
-            echo "No tags were returned by steps.build_image.outputs.tags" >&2
-            exit 1
-          fi
-
-          for TAG in "${TAGS[@]}"; do
-            DESTINATION="docker://${REGISTRY}/${IMAGE}:${TAG}"
-            SOURCE="${IMAGE}:${TAG}"
-            ATTEMPT=1
-
-            while true; do
-              DIGEST_FILE="$(mktemp -p /tmp phalanx-push-digest.XXXXXX)"
-              PUSH_ERROR_FILE="$(mktemp -p /tmp phalanx-push-error.XXXXXX)"
-              if buildah push --digestfile "${DIGEST_FILE}" --compression-format=zstd "${SOURCE}" "${DESTINATION}" 2>"${PUSH_ERROR_FILE}"; then
-                CURRENT_DIGEST="$(<"${DIGEST_FILE}")"
-                rm -f "${DIGEST_FILE}"
-                rm -f "${PUSH_ERROR_FILE}"
-                if [[ -z "${DIGEST}" ]]; then
-                  DIGEST="${CURRENT_DIGEST}"
-                elif [[ "${DIGEST}" != "${CURRENT_DIGEST}" ]]; then
-                  echo "Digest mismatch for tag ${TAG}: expected ${DIGEST}, got ${CURRENT_DIGEST}" >&2
-                  exit 1
-                fi
-                break
-              fi
-              rm -f "${DIGEST_FILE}"
-              PUSH_ERROR="$(<"${PUSH_ERROR_FILE}")"
-              rm -f "${PUSH_ERROR_FILE}"
-
-              if (( ATTEMPT >= MAX_ATTEMPTS )); then
-                echo "Push failed for tag ${TAG} (${DESTINATION}) after ${ATTEMPT} attempts" >&2
-                echo "${PUSH_ERROR}" >&2
-                exit 1
-              fi
-
-              echo "Push attempt ${ATTEMPT} failed for tag ${TAG}; retrying..." >&2
-              echo "${PUSH_ERROR}" >&2
-              ATTEMPT=$((ATTEMPT + 1))
-              sleep 10
-            done
-          done
-
-          echo "digest=${DIGEST}" >> "${GITHUB_OUTPUT}"
+        env:
+          REGISTRY_USER: ${{ github.actor }}
+          REGISTRY_PASSWORD: ${{ github.token }}
+        with:
+          action: redhat-actions/push-to-registry@v2
+          attempt_limit: 10
+          attempt_delay: 10000
+          with: |
+            image: ${{ steps.build_image.outputs.image }}
+            tags: ${{ steps.build_image.outputs.tags }}
+            registry: ${{ steps.registry_case.outputs.lowercase }}
+            username: ${{ env.REGISTRY_USER }}
+            password: ${{ env.REGISTRY_PASSWORD }}
+            extra-args: |
+              --compression-format=zstd
 
       # This section is optional and only needs to be enabled if you plan on distributing
       # your project for others to consume. You will need to create a public and private key
@@ -241,6 +201,6 @@ jobs:
         run: |
           cosign sign -y --key env://COSIGN_PRIVATE_KEY ${{ steps.registry_case.outputs.lowercase }}/${{ steps.build_image.outputs.image }}@${TAGS}
         env:
-          TAGS: ${{ steps.push.outputs.digest }}
+          TAGS: ${{ fromJSON(steps.push.outputs.outputs).digest }}
           COSIGN_EXPERIMENTAL: false
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
