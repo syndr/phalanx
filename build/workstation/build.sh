@@ -29,6 +29,13 @@ source ../hyprland/build.sh
 echo "Installing Workstation packages"
 rpm-ostree install "${workstation_packages[@]}"
 
+echo "Creating 1Password CLI sysusers configuration"
+# Pre-create the onepassword-cli group with a GID of 11005 (>= 1000)
+# This ensures that when the layered 1password-cli package is installed/updated on the host,
+# its files are owned by a valid user-level GID rather than a system GID under 1000.
+mkdir -p /usr/lib/sysusers.d
+echo "g onepassword-cli 11005 -" > /usr/lib/sysusers.d/10-1password-cli.conf
+
 echo "Adding 1Password repository"
 # Add 1Password official RPM repository
 cat > /etc/yum.repos.d/1password.repo << 'EOF'
