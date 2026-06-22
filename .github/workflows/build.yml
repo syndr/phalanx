@@ -133,6 +133,26 @@ jobs:
             org.opencontainers.image.description=${{ env.MY_IMAGE_DESC }}
             org.opencontainers.image.title=${{ env.MY_IMAGE_NAME }}
 
+      # Build image using Buildah action
+      - name: Build Image
+        id: build_image
+        # TODO: switch back to a stable v2.x tag after it includes dd3579c (Node 24 update):
+        # https://github.com/redhat-actions/buildah-build/commit/dd3579cfa2a4bbd4d78ea54d724d895cdb4617c1
+        uses: redhat-actions/buildah-build@dd3579cfa2a4bbd4d78ea54d724d895cdb4617c1
+        with:
+          containerfiles: |
+            Containerfile
+          # Postfix image name with -custom to make it a little more descriptive
+          # Syntax: https://docs.github.com/en/actions/learn-github-actions/expressions#format
+          image: ${{ env.MY_IMAGE_NAME }}
+          tags: |
+            ${{ steps.generate-tags.outputs.alias_tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          oci: false
+          build-args: |
+            SOURCE_SUFFIX=${{ env.IMAGE_SUFFIX }}
+            VARIANT=${{ inputs.permutation }}
+
       # Workaround bug where capital letters in your GitHub username make it impossible to push to GHCR.
       # https://github.com/macbre/push-to-ghcr/issues/12
       - name: Lowercase Registry
@@ -148,40 +168,24 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Generate registry tags
-        id: generate-registry-tags
-        shell: bash
+      - name: Push Image to GHCR
+        uses: Wandalen/wretry.action@v3
+        id: push
         env:
-          TAGS_RAW: ${{ steps.generate-tags.outputs.alias_tags }}
-          IMAGE_NAME: ${{ env.MY_IMAGE_NAME }}
-          IMAGE_REGISTRY: ${{ steps.registry_case.outputs.lowercase }}
-        run: |
-          set -euo pipefail
-          mapfile -t TAGS < <(printf '%s\n' "${TAGS_RAW}" | tr ' ' '\n' | sed '/^$/d')
-          if (( ${#TAGS[@]} == 0 )); then
-            echo "No build tags were generated." >&2
-            exit 1
-          fi
-          {
-            echo "tags<<EOF"
-            for TAG in "${TAGS[@]}"; do
-              echo "${IMAGE_REGISTRY}/${IMAGE_NAME}:${TAG}"
-            done
-            echo "EOF"
-          } >> "${GITHUB_OUTPUT}"
-
-      - name: Build and Push Image
-        id: build_image
-        uses: docker/build-push-action@v7
+          REGISTRY_USER: ${{ github.actor }}
+          REGISTRY_PASSWORD: ${{ github.token }}
         with:
-          context: .
-          file: ./Containerfile
-          push: true
-          tags: ${{ steps.generate-registry-tags.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            SOURCE_SUFFIX=${{ env.IMAGE_SUFFIX }}
-            VARIANT=${{ inputs.permutation }}
+          action: redhat-actions/push-to-registry@v2
+          attempt_limit: 10
+          attempt_delay: 10000
+          with: |
+            image: ${{ steps.build_image.outputs.image }}
+            tags: ${{ steps.build_image.outputs.tags }}
+            registry: ${{ steps.registry_case.outputs.lowercase }}
+            username: ${{ env.REGISTRY_USER }}
+            password: ${{ env.REGISTRY_PASSWORD }}
+            extra-args: |
+              --compression-format=zstd
 
       # This section is optional and only needs to be enabled if you plan on distributing
       # your project for others to consume. You will need to create a public and private key
@@ -195,8 +199,8 @@ jobs:
       - name: Sign container image
         if: github.event_name != 'pull_request' && success()
         run: |
-          cosign sign -y --key env://COSIGN_PRIVATE_KEY ${{ steps.registry_case.outputs.lowercase }}/${{ env.MY_IMAGE_NAME }}@${TAGS}
+          cosign sign -y --key env://COSIGN_PRIVATE_KEY ${{ steps.registry_case.outputs.lowercase }}/${{ steps.build_image.outputs.image }}@${TAGS}
         env:
-          TAGS: ${{ steps.build_image.outputs.digest }}
+          TAGS: ${{ fromJSON(steps.push.outputs.outputs).digest }}
           COSIGN_EXPERIMENTAL: false
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
