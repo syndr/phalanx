@@ -136,7 +136,7 @@ jobs:
       # Build image using Buildah action
       - name: Build Image
         id: build_image
-        # Node 24 compatibility until a new stable tag includes dd3579c
+        # TODO: switch back to a stable v2.x tag after it includes dd3579c (Node 24 update)
         uses: redhat-actions/buildah-build@dd3579cfa2a4bbd4d78ea54d724d895cdb4617c1
         with:
           containerfiles: |
@@ -175,7 +175,7 @@ jobs:
           REGISTRY="${{ steps.registry_case.outputs.lowercase }}"
           DIGEST=""
           TAGS_RAW="${{ steps.build_image.outputs.tags }}"
-          read -r -a TAGS <<< "${TAGS_RAW}"
+          mapfile -t TAGS < <(printf '%s\n' "${TAGS_RAW}" | tr ' ' '\n' | sed '/^$/d')
 
           for TAG in "${TAGS[@]}"; do
             DESTINATION="docker://${REGISTRY}/${IMAGE}:${TAG}"
@@ -183,20 +183,22 @@ jobs:
             ATTEMPT=1
 
             while true; do
-              if [[ -z "${DIGEST}" ]]; then
-                DIGEST_FILE="$(mktemp)"
-                if buildah push --digestfile "${DIGEST_FILE}" --compression-format=zstd "${SOURCE}" "${DESTINATION}"; then
-                  DIGEST="$(<"${DIGEST_FILE}")"
-                  rm -f "${DIGEST_FILE}"
-                  break
-                fi
+              DIGEST_FILE="$(mktemp)"
+              if buildah push --digestfile "${DIGEST_FILE}" --compression-format=zstd "${SOURCE}" "${DESTINATION}"; then
+                CURRENT_DIGEST="$(<"${DIGEST_FILE}")"
                 rm -f "${DIGEST_FILE}"
-              elif buildah push --compression-format=zstd "${SOURCE}" "${DESTINATION}"; then
+                if [[ -z "${DIGEST}" ]]; then
+                  DIGEST="${CURRENT_DIGEST}"
+                elif [[ "${DIGEST}" != "${CURRENT_DIGEST}" ]]; then
+                  echo "Digest mismatch for tag ${TAG}: expected ${DIGEST}, got ${CURRENT_DIGEST}" >&2
+                  exit 1
+                fi
                 break
               fi
+              rm -f "${DIGEST_FILE}"
 
               if (( ATTEMPT >= 10 )); then
-                echo "Push failed for ${DESTINATION} after ${ATTEMPT} attempts"
+                echo "Push failed for tag ${TAG} (${DESTINATION}) after ${ATTEMPT} attempts" >&2
                 exit 1
               fi
 
