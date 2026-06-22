@@ -174,9 +174,14 @@ jobs:
           set -euo pipefail
           IMAGE="${{ steps.build_image.outputs.image }}"
           REGISTRY="${{ steps.registry_case.outputs.lowercase }}"
+          MAX_ATTEMPTS=10
           DIGEST=""
           TAGS_RAW="${{ steps.build_image.outputs.tags }}"
           # buildah-build exposes tags as a whitespace-delimited string.
+          if [[ "${TAGS_RAW}" == *","* ]]; then
+            echo "Unexpected comma-delimited tags format: ${TAGS_RAW}" >&2
+            exit 1
+          fi
           mapfile -t TAGS < <(printf '%s\n' "${TAGS_RAW}" | tr ' ' '\n' | sed '/^$/d')
           if (( ${#TAGS[@]} == 0 )); then
             echo "No tags were returned by steps.build_image.outputs.tags" >&2
@@ -189,8 +194,8 @@ jobs:
             ATTEMPT=1
 
             while true; do
-              DIGEST_FILE="$(mktemp)"
-              PUSH_ERROR_FILE="$(mktemp)"
+              DIGEST_FILE="$(mktemp -p /tmp phalanx-push-digest.XXXXXX)"
+              PUSH_ERROR_FILE="$(mktemp -p /tmp phalanx-push-error.XXXXXX)"
               if buildah push --digestfile "${DIGEST_FILE}" --compression-format=zstd "${SOURCE}" "${DESTINATION}" 2>"${PUSH_ERROR_FILE}"; then
                 CURRENT_DIGEST="$(<"${DIGEST_FILE}")"
                 rm -f "${DIGEST_FILE}"
@@ -207,7 +212,7 @@ jobs:
               PUSH_ERROR="$(<"${PUSH_ERROR_FILE}")"
               rm -f "${PUSH_ERROR_FILE}"
 
-              if (( ATTEMPT >= 10 )); then
+              if (( ATTEMPT >= MAX_ATTEMPTS )); then
                 echo "Push failed for tag ${TAG} (${DESTINATION}) after ${ATTEMPT} attempts" >&2
                 echo "${PUSH_ERROR}" >&2
                 exit 1
