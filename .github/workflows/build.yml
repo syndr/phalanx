@@ -136,7 +136,8 @@ jobs:
       # Build image using Buildah action
       - name: Build Image
         id: build_image
-        # TODO: switch back to a stable v2.x tag after it includes dd3579c (Node 24 update)
+        # TODO: switch back to a stable v2.x tag after it includes dd3579c (Node 24 update):
+        # https://github.com/redhat-actions/buildah-build/commit/dd3579cfa2a4bbd4d78ea54d724d895cdb4617c1
         uses: redhat-actions/buildah-build@dd3579cfa2a4bbd4d78ea54d724d895cdb4617c1
         with:
           containerfiles: |
@@ -175,7 +176,12 @@ jobs:
           REGISTRY="${{ steps.registry_case.outputs.lowercase }}"
           DIGEST=""
           TAGS_RAW="${{ steps.build_image.outputs.tags }}"
+          # buildah-build exposes tags as a whitespace-delimited string.
           mapfile -t TAGS < <(printf '%s\n' "${TAGS_RAW}" | tr ' ' '\n' | sed '/^$/d')
+          if (( ${#TAGS[@]} == 0 )); then
+            echo "No tags were returned by steps.build_image.outputs.tags" >&2
+            exit 1
+          fi
 
           for TAG in "${TAGS[@]}"; do
             DESTINATION="docker://${REGISTRY}/${IMAGE}:${TAG}"
@@ -184,9 +190,11 @@ jobs:
 
             while true; do
               DIGEST_FILE="$(mktemp)"
-              if buildah push --digestfile "${DIGEST_FILE}" --compression-format=zstd "${SOURCE}" "${DESTINATION}"; then
+              PUSH_ERROR_FILE="$(mktemp)"
+              if buildah push --digestfile "${DIGEST_FILE}" --compression-format=zstd "${SOURCE}" "${DESTINATION}" 2>"${PUSH_ERROR_FILE}"; then
                 CURRENT_DIGEST="$(<"${DIGEST_FILE}")"
                 rm -f "${DIGEST_FILE}"
+                rm -f "${PUSH_ERROR_FILE}"
                 if [[ -z "${DIGEST}" ]]; then
                   DIGEST="${CURRENT_DIGEST}"
                 elif [[ "${DIGEST}" != "${CURRENT_DIGEST}" ]]; then
@@ -196,12 +204,17 @@ jobs:
                 break
               fi
               rm -f "${DIGEST_FILE}"
+              PUSH_ERROR="$(<"${PUSH_ERROR_FILE}")"
+              rm -f "${PUSH_ERROR_FILE}"
 
               if (( ATTEMPT >= 10 )); then
                 echo "Push failed for tag ${TAG} (${DESTINATION}) after ${ATTEMPT} attempts" >&2
+                echo "${PUSH_ERROR}" >&2
                 exit 1
               fi
 
+              echo "Push attempt ${ATTEMPT} failed for tag ${TAG}; retrying..." >&2
+              echo "${PUSH_ERROR}" >&2
               ATTEMPT=$((ATTEMPT + 1))
               sleep 10
             done
