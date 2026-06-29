@@ -169,7 +169,17 @@ rpm-ostree install "${hyprland_packages[@]}"
 #    add an admin override that routes Secret to kwallet. xdg-desktop-portal uses the
 #    FIRST matching portals.conf with no merge, so the override in /etc must repeat
 #    the full [preferred] block from /usr/share/.../hyprland-portals.conf.
-echo "Routing the Secret portal to KWallet under Hyprland"
+#
+# The same problem also blocks org.freedesktop.portal.Usb, needed for SPICE USB
+# redirection (e.g. the field-monitor Flatpak). The Usb impl IS provided by
+# xdg-desktop-portal-kde, but its kde.portal is gated "UseIn=KDE" so Hyprland never
+# selects it. We do NOT lift kde.portal's UseIn wholesale: kde.portal declares ~19
+# interfaces (FileChooser, Screenshot, ScreenCast, Settings, ...) and making it
+# eligible under Hyprland risks silently rerouting those to KDE. Instead we drop a
+# SEPARATE minimal backend file (kde-usb.portal) that points at the same kde impl
+# but declares ONLY Usb, gated for hyprland, and route Usb to it. kde.portal stays
+# untouched so its other interfaces keep resolving to hyprland/gtk.
+echo "Routing the Secret and Usb portals under Hyprland"
 mkdir -p /usr/share/xdg-desktop-portal/portals
 cat >/usr/share/xdg-desktop-portal/portals/kwallet.portal <<'EOF'
 [portal]
@@ -178,11 +188,19 @@ Interfaces=org.freedesktop.impl.portal.Secret;
 UseIn=kde;hyprland
 EOF
 
+cat >/usr/share/xdg-desktop-portal/portals/kde-usb.portal <<'EOF'
+[portal]
+DBusName=org.freedesktop.impl.portal.desktop.kde
+Interfaces=org.freedesktop.impl.portal.Usb;
+UseIn=kde;hyprland
+EOF
+
 mkdir -p /etc/xdg-desktop-portal
 cat >/etc/xdg-desktop-portal/hyprland-portals.conf <<'EOF'
 [preferred]
 default=hyprland;gtk
 org.freedesktop.portal.Secret=kwallet
+org.freedesktop.portal.Usb=kde-usb
 EOF
 
 echo "Installing Lan Mouse"
