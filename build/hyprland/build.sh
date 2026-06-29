@@ -153,6 +153,38 @@ fi
 echo "Installing Hyprland and dependencies"
 rpm-ostree install "${hyprland_packages[@]}"
 
+# Wire the org.freedesktop.portal.Secret portal to KWallet under Hyprland.
+# Without this, Flatpak/native apps fail with:
+#   "A portal frontend implementing org.freedesktop.portal.Secret was not found"
+# KWallet (kwalletd6) is the secret service on this image (no xdg-desktop-portal-gnome,
+# and we do not want it). Two pieces are required:
+#
+# 1) The kwallet portal backend (.portal file) is gated "UseIn=kde", so Hyprland
+#    sessions never see it. .portal files are only read from XDG_DATA_DIRS
+#    (/usr/share, /usr/local/share) - NOT /etc - and on this atomic image
+#    /usr/local maps to mutable /var, so the only bakeable location is /usr/share.
+#    We overwrite the kf6-kwallet-owned file to add "hyprland" to UseIn.
+#    NOTE: this intentionally overwrites a package-owned file in the derived image.
+# 2) The Hyprland portal routing (default=hyprland;gtk) sends Secret nowhere, so we
+#    add an admin override that routes Secret to kwallet. xdg-desktop-portal uses the
+#    FIRST matching portals.conf with no merge, so the override in /etc must repeat
+#    the full [preferred] block from /usr/share/.../hyprland-portals.conf.
+echo "Routing the Secret portal to KWallet under Hyprland"
+mkdir -p /usr/share/xdg-desktop-portal/portals
+cat >/usr/share/xdg-desktop-portal/portals/kwallet.portal <<'EOF'
+[portal]
+DBusName=org.freedesktop.impl.portal.desktop.kwallet
+Interfaces=org.freedesktop.impl.portal.Secret;
+UseIn=kde;hyprland
+EOF
+
+mkdir -p /etc/xdg-desktop-portal
+cat >/etc/xdg-desktop-portal/hyprland-portals.conf <<'EOF'
+[preferred]
+default=hyprland;gtk
+org.freedesktop.portal.Secret=kwallet
+EOF
+
 echo "Installing Lan Mouse"
 "${SCRIPT_DIR}/install-lan-mouse.sh"
 
