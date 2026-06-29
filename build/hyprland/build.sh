@@ -27,7 +27,6 @@ copr_repos=(
     alebastr/sway-extras
 )
 
-# need to add: swww, hyprland-qtutils
 # Package list for Hyprland configuration
 hyprland_packages=(
   # Core Hyprland (polkit agent added conditionally below due to Qt conflicts on NVIDIA)
@@ -37,7 +36,15 @@ hyprland_packages=(
   kitty wlogout
 
   # Theming and appearance
-  kvantum qt5ct qt6ct qt6-qtsvg nwg-look hyprcursor hyprland-guiutils
+  # Fixes Qt-Quick / Kvantum styling under Hyprland (dotfiles installer warnings):
+  #   - kvantum-qt6: Qt6 Kvantum engine so the Kvantum (Hackerer-Dark) theme applies
+  #     to Qt6 widget apps. On Fedora 44 this is shipped inside the `kvantum` package
+  #     (which Provides kvantum-qt6); listed explicitly to document the requirement.
+  #   - hyprland-guiutils: formerly `hyprland-qtutils` (which it Obsoletes); provides
+  #     hyprland-share-picker (Wayland screen-share dialog). The org.hyprland.style
+  #     QtQuick module lives in hyprland-qt-support, layered conditionally below once
+  #     the base image ships Qt >= 6.11.
+  kvantum kvantum-qt6 qt5ct qt6ct qt6-qtsvg nwg-look hyprcursor hyprland-guiutils
 
   # Wallpaper and color
   swww wallust
