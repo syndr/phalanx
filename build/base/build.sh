@@ -11,7 +11,7 @@ base_packages=(
   iptables-nft
 
   # System utilities
-  gvfs-smb btop cloud-utils-growpart
+  gvfs-smb gvfs-fuse btop cloud-utils-growpart
 
   # KDE add-ons
   kvantum kvantum-data arc-kde-kvantum
@@ -42,3 +42,9 @@ dnf5 copr enable -y wezfurlong/wezterm-nightly
 echo "Installing base packages"
 rpm-ostree install "${base_packages[@]}"
 
+echo "Installing plasmalogin udev settle workaround"
+mkdir -p /etc/systemd/system/plasmalogin.service.d
+cat >/etc/systemd/system/plasmalogin.service.d/10-udev-settle.conf <<'EOF'
+[Service]
+ExecStartPre=-/usr/bin/udevadm settle --timeout=10
+EOF
