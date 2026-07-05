@@ -1,5 +1,10 @@
 # Phalanx - Universal Blue OCI Container Image Builder
 
+> **Agent conventions live in [`AGENTS.md`](AGENTS.md).** Follow it — in
+> particular, record architecturally significant decisions as ADRs in
+> [`docs/adr/`](docs/adr/) per [`docs/adr/README.md`](docs/adr/README.md). This
+> file is the detailed project reference.
+
 An opinionated Linux system based upon Fedora Atomic OS and Universal Blue that builds bootable OCI container images for rpm-ostree deployment.
 
 ## Project Overview
