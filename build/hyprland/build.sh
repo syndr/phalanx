@@ -25,6 +25,9 @@ copr_repos=(
 
     # For swww
     alebastr/sway-extras
+
+    # swaylock-plugin (+ windowtolayer) F44 RPMs for the xscreensaver lockscreen
+    syndr/swaylock-plugin
 )
 
 # need to add: swww, hyprland-qtutils
@@ -50,6 +53,13 @@ hyprland_packages=(
 
   # Screen locking and power management
   hyprlock hypridle
+
+  # Screensaver lockscreen (swaylock-plugin + xscreensaver hacks, incl. GL)
+  # swaylock-plugin/windowtolayer come from the syndr/swaylock-plugin COPR;
+  # the xscreensaver-* hacks come from Fedora. hyprlock is kept as the fallback.
+  swaylock-plugin windowtolayer
+  xscreensaver-extras xscreensaver-extras-gss
+  xscreensaver-gl xscreensaver-gl-base
 
   # Screenshot tools
   grim slurp swappy
@@ -148,6 +158,29 @@ rpm-ostree install "${hyprland_packages[@]}"
 
 echo "Installing Lan Mouse"
 "${SCRIPT_DIR}/install-lan-mouse.sh"
+
+# swaylock-plugin screensaver lockscreen runtime bits.
+#
+# /var/lib/xkb: swaylock-plugin's nested Xwayland compiles its keymap to
+# /var/lib/xkb/server-N.xkm. /var is machine-local state (not in the ostree
+# image), so the directory is created at boot via systemd-tmpfiles rather than
+# mkdir here. See files/tmpfiles.d/swaylock-plugin-xkb.conf.
+echo "Installing swaylock-plugin xkb tmpfiles config"
+install -Dm644 "${SCRIPT_DIR}/files/tmpfiles.d/swaylock-plugin-xkb.conf" \
+  /usr/lib/tmpfiles.d/swaylock-plugin-xkb.conf
+
+# PAM: the swaylock-plugin RPM ships /etc/pam.d/swaylock-plugin as a
+# %config(noreplace) file (lands in /usr/etc under ostree and merges at boot).
+# Only write a fallback if it is somehow absent, so we never conflict with the
+# RPM-owned file.
+if [[ ! -e /etc/pam.d/swaylock-plugin && ! -e /usr/etc/pam.d/swaylock-plugin ]]; then
+  echo "swaylock-plugin PAM file missing from RPM; installing fallback"
+  install -Dm644 /dev/stdin /etc/pam.d/swaylock-plugin <<'EOF'
+auth include login
+EOF
+else
+  echo "swaylock-plugin PAM file provided by RPM"
+fi
 
 # NOTE: Plugin build dependencies are NOT installed here due to gcc version conflicts
 # with the base image. Instead, users should use the hyprland-build distrobox container.
