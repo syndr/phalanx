@@ -175,6 +175,17 @@ echo "Installing swaylock-plugin xkb tmpfiles config"
 install -Dm644 "${SCRIPT_DIR}/files/tmpfiles.d/swaylock-plugin-xkb.conf" \
   /usr/lib/tmpfiles.d/swaylock-plugin-xkb.conf
 
+# Portal backends must not be D-Bus-activated outside a graphical session:
+# at logout under Hyprland/uwsm the compositor dies first, then
+# xdg-desktop-portal re-activates its backends while closing portal sessions,
+# and the doomed start ("cannot open display") leaves the unit failed for
+# fumon to report at the next login. See files/systemd-user/ for details.
+echo "Installing portal-backend graphical-session drop-ins"
+for unit in xdg-desktop-portal-gtk plasma-xdg-desktop-portal-kde; do
+  install -Dm644 "${SCRIPT_DIR}/files/systemd-user/graphical-session-only.conf" \
+    "/usr/lib/systemd/user/${unit}.service.d/10-graphical-session-only.conf"
+done
+
 # PAM: the swaylock-plugin RPM ships /etc/pam.d/swaylock-plugin as a
 # %config(noreplace) file (lands in /usr/etc under ostree and merges at boot).
 # Only write a fallback if it is somehow absent, so we never conflict with the
