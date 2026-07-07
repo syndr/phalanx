@@ -181,7 +181,7 @@ install -Dm644 "${SCRIPT_DIR}/files/tmpfiles.d/swaylock-plugin-xkb.conf" \
 # and the doomed start ("cannot open display") leaves the unit failed for
 # fumon to report at the next login. See files/systemd-user/ for details.
 echo "Installing portal-backend graphical-session drop-ins"
-for unit in xdg-desktop-portal-gtk plasma-xdg-desktop-portal-kde; do
+for unit in xdg-desktop-portal-gtk plasma-xdg-desktop-portal-kde xdg-desktop-portal-hyprland; do
   install -Dm644 "${SCRIPT_DIR}/files/systemd-user/graphical-session-only.conf" \
     "/usr/lib/systemd/user/${unit}.service.d/10-graphical-session-only.conf"
 done
