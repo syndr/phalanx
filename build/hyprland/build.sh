@@ -26,7 +26,8 @@ copr_repos=(
     # For swww
     alebastr/sway-extras
 
-    # swaylock-plugin (+ windowtolayer) F44 RPMs for the xscreensaver lockscreen
+    # swaylock-plugin (+ -screensaver tooling, windowtolayer) F44 RPMs for the
+    # xscreensaver lockscreen
     syndr/swaylock-plugin
 )
 
@@ -55,11 +56,16 @@ hyprland_packages=(
   hyprlock hypridle
 
   # Screensaver lockscreen (swaylock-plugin + xscreensaver hacks, incl. GL)
-  # swaylock-plugin/windowtolayer come from the syndr/swaylock-plugin COPR;
-  # the xscreensaver-* hacks come from Fedora. hyprlock is kept as the fallback.
-  swaylock-plugin windowtolayer
+  # swaylock-plugin/-screensaver/windowtolayer come from the syndr/swaylock-plugin
+  # COPR; the xscreensaver-* hacks come from Fedora. hyprlock stays the fallback.
+  # swaylock-plugin-screensaver (>= 1.8.6.2) ships the canonical lock launcher,
+  # rofi hack picker, and thumbnail generator in /usr/bin (the dotfiles' copies
+  # become thin wrappers around them). Xvfb powers the thumbnail generator;
+  # ImageMagick, its other half, is already under "Scripting and helper tools".
+  swaylock-plugin swaylock-plugin-screensaver windowtolayer
   xscreensaver-extras xscreensaver-extras-gss
   xscreensaver-gl xscreensaver-gl-base
+  xorg-x11-server-Xvfb
 
   # Screenshot tools
   grim slurp swappy

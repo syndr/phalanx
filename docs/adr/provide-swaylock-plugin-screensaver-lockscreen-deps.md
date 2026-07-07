@@ -49,6 +49,12 @@ Ship the system-level runtime dependencies in the `hyprland` variant image
    and `rpm-ostree install swaylock-plugin windowtolayer`. This matches the
    existing pattern; only the COPR owner needs a (free) Fedora account, while the
    image build and end users consume the repo anonymously.
+   *Amended 2026-07-07:* also install `swaylock-plugin-screensaver` (subpackage,
+   >= 1.8.6.2) — the canonical lock launcher / rofi hack picker / thumbnail
+   generator upstreamed from the dotfiles (fork PR #7), plus
+   `xorg-x11-server-Xvfb` for the thumbnail generator (ImageMagick was already
+   in the image). The dotfiles' script copies become thin wrappers over the
+   packaged `/usr/bin` tools.
 2. **Source: the `syndr` fork, not upstream `mstoeckl`.** The fork's `SIGCHLD`
    reset is mandatory for the lockscreen to function; the RPM is built from it.
 3. **xscreensaver hacks, including GL, from Fedora:** `xscreensaver-extras`,
@@ -108,7 +114,8 @@ RPM-owned, at `/usr/libexec/swaylock-plugin/example_xwayland_wrapper.py`, so
 - swaylock-plugin fork (RPM source): `https://github.com/syndr/swaylock-plugin`
   (`main`) — carries the mandatory `SIGCHLD` reset + multi-output fix.
 - windowtolayer: `https://gitlab.freedesktop.org/mstoeckl/windowtolayer`.
-- COPR: `syndr/swaylock-plugin` (packages `swaylock-plugin`, `windowtolayer`;
+- COPR: `syndr/swaylock-plugin` (packages `swaylock-plugin`,
+  `swaylock-plugin-screensaver`, `windowtolayer`;
   chroots `fedora-43-{x86_64,aarch64}`, `fedora-44-{x86_64,aarch64}`).
 - Config half: `syndr/hyprland-wm-config` @ `feat/swaylock-screensaver-lockscreen`.
 - ostree `/var` + tmpfiles: <https://coreos.github.io/rpm-ostree/container/>,
