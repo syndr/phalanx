@@ -197,8 +197,16 @@ jobs:
       - name: Sign container image
         if: github.event_name != 'pull_request' && success()
         run: |
-          cosign sign -y --key env://COSIGN_PRIVATE_KEY ${{ steps.registry_case.outputs.lowercase }}/${{ steps.build_image.outputs.image }}@${TAGS}
+          # Extract the digest here rather than with fromJSON() in env: the runner
+          # evaluates step env templates even when the if-guard skips the step, so
+          # fromJSON('') on empty wretry outputs kills the whole job (seen on PR runs).
+          DIGEST="$(jq -r '.digest // empty' <<<"${PUSH_OUTPUTS}")"
+          if [[ -z "$DIGEST" ]]; then
+              echo "::error::push step returned no digest; cannot sign image"
+              exit 1
+          fi
+          cosign sign -y --key env://COSIGN_PRIVATE_KEY "${{ steps.registry_case.outputs.lowercase }}/${{ steps.build_image.outputs.image }}@${DIGEST}"
         env:
-          TAGS: ${{ fromJSON(steps.push.outputs.outputs).digest }}
+          PUSH_OUTPUTS: ${{ steps.push.outputs.outputs }}
           COSIGN_EXPERIMENTAL: false
           COSIGN_PRIVATE_KEY: ${{ secrets.SIGNING_SECRET }}
