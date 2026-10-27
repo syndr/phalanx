@@ -167,10 +167,10 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Native retry loop replacing Wandalen/wretry.action (unmaintained since
-      # v3.8.0, Node 20, deprecated on Node 24 runners). Replicates
-      # redhat-actions/push-to-registry@v2: buildah push per tag with zstd.
-      # Buildah remains on PATH after the buildah-build step, the same
-      # assumption push-to-registry itself makes.
+      # v3.8.0, Node 20, deprecated on Node 24 runners). Replicates the
+      # redhat-actions/push-to-registry@v2 pattern: per-tag podman push from
+      # localhost/ storage (buildah-build leaves the image in the shared
+      # storage) with zstd compression.
       - name: Push Image to GHCR
         id: push
         env:
@@ -182,24 +182,35 @@ jobs:
           REGISTRY="${{ steps.registry_case.outputs.lowercase }}"
           TAGS="${{ steps.generate-tags.outputs.alias_tags }}"
           MAX_ATTEMPTS=10
-          ATTEMPT=0
-          while (( ATTEMPT < MAX_ATTEMPTS )); do
-            ATTEMPT=$(( ATTEMPT + 1 ))
-            echo "Push attempt ${ATTEMPT}/${MAX_ATTEMPTS}"
-            if buildah push \
-                 --username "${REGISTRY_USER}" \
-                 --password "${REGISTRY_PASSWORD}" \
-                 --compression-format zstd \
+
+          push_ref() {
+            local src="$1" dst="$2"
+            local attempt=1
+            until podman push --quiet \
                  --digestfile /tmp/image-digest \
-                 $(for TAG in ${TAGS}; do echo -n "--tag ${TAG} "; done) \
-                 "${REGISTRY}/${IMAGE}"; then
-              break
-            fi
-            echo "Push failed; sleeping 10s before retry"
-            sleep 10
+                 --compression-format zstd \
+                 --creds "${REGISTRY_USER}:${REGISTRY_PASSWORD}" \
+                 "${src}" "${dst}"; do
+              if (( attempt >= MAX_ATTEMPTS )); then
+                echo "::error::push of ${dst} failed after ${MAX_ATTEMPTS} attempts"
+                return 1
+              fi
+              echo "Push of ${dst} failed; attempt ${attempt}/${MAX_ATTEMPTS}, sleeping 10s"
+              sleep 10
+              attempt=$(( attempt + 1 ))
+            done
+          }
+
+          PUSH_FAILED=0
+          for TAG in ${TAGS}; do
+            push_ref "localhost/${IMAGE}:${TAG}" "${REGISTRY}/${IMAGE}:${TAG}" || PUSH_FAILED=1
           done
+          if (( PUSH_FAILED )); then
+            echo "::error::one or more tag pushes failed"
+            exit 1
+          fi
           if [[ ! -f /tmp/image-digest ]]; then
-            echo "::error::image push failed after ${MAX_ATTEMPTS} attempts"
+            echo "::error::push completed but wrote no digest; cannot sign image"
             exit 1
           fi
           echo "digest=$(cat /tmp/image-digest)" >> "${GITHUB_OUTPUT}"
