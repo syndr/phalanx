@@ -170,7 +170,9 @@ jobs:
       # v3.8.0, Node 20, deprecated on Node 24 runners). Replicates the
       # redhat-actions/push-to-registry@v2 pattern: per-tag podman push from
       # localhost/ storage (buildah-build leaves the image in the shared
-      # storage) with zstd compression.
+      # storage) with zstd compression. Credentials go through a 0600 temp
+      # authfile (removed on exit), not --creds on the command line, so the
+      # token never appears in /proc/<pid>/cmdline.
       - name: Push Image to GHCR
         id: push
         env:
@@ -183,13 +185,21 @@ jobs:
           TAGS="${{ steps.generate-tags.outputs.alias_tags }}"
           MAX_ATTEMPTS=10
 
+          AUTHFILE="$(mktemp)"
+          chmod 600 "${AUTHFILE}"
+          trap 'rm -f "${AUTHFILE}"' EXIT
+          printf '{"auths":{"%s":{"auth":"%s"}}}' \
+            "${REGISTRY}" \
+            "$(printf '%s:%s' "${REGISTRY_USER}" "${REGISTRY_PASSWORD}" | base64 | tr -d '\n')" \
+            > "${AUTHFILE}"
+
           push_ref() {
             local src="$1" dst="$2"
             local attempt=1
             until podman push --quiet \
+                 --authfile "${AUTHFILE}" \
                  --digestfile /tmp/image-digest \
                  --compression-format zstd \
-                 --creds "${REGISTRY_USER}:${REGISTRY_PASSWORD}" \
                  "${src}" "${dst}"; do
               if (( attempt >= MAX_ATTEMPTS )); then
                 echo "::error::push of ${dst} failed after ${MAX_ATTEMPTS} attempts"
