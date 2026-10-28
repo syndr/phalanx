@@ -161,22 +161,18 @@ fi
 
 # Bazzite's fc44 base image ships Terra X (terra-xorg-x11-server-Xwayland)
 # in the base commit, which conflicts with xorg-x11-server-Xwayland that the
-# Hyprland copr builds require. Terra provides only the *unqualified*
-# xorg-x11-server-Xwayland virtual, which does not satisfy the arch-qualified
-# xorg-x11-server-Xwayland(x86-64) requirement, and nothing in the base
-# provides pkgconfig(xwayland). On Terra bases we therefore install a
-# no-file shim (build/helpers/) supplying both virtuals and use the copr's
-# hyprland-git build; Hyprland runs on Terra's Xwayland binary
-# (/usr/bin/Xwayland, drop-in). No base modification: ostree containers
-# only allow rpm-ostree install, not remove. Self-adjusts if Bazzite
-# reverts to Xorg: the stable hyprland then pulls the classic server.
+# Hyprland copr builds require. Override-remove the Terra package (same
+# pattern as workstation-nofun removing steam/lutris) so the classic Xorg
+# Xwayland server can be layered in for Hyprland. Nothing in the base
+# requires the Terra package (rpm -q --whatrequires), so the override is
+# clean. Uses the copr's hyprland-git build (newer than the 0.56.2 stable);
+# note it is a moving git snapshot - a broken snapshot fails the build in
+# CI rather than shipping.
 if rpm -q terra-xorg-x11-server-Xwayland >/dev/null 2>&1; then
-  echo "Base image ships Terra X - using hyprland-git + Xwayland shim"
-  hyprland_packages[0]=hyprland-git
-  hyprland_packages+=(/tmp/build/helpers/phalanx-xserver-shim-1-1.fc44.noarch.rpm)
-else
-  echo "Base image uses Xorg Xwayland - using stable hyprland"
+  echo "Base image ships Terra X - override-removing it in favor of Xorg Xwayland"
+  rpm-ostree override remove terra-xorg-x11-server-Xwayland
 fi
+hyprland_packages[0]=hyprland-git
 
 echo "Installing Hyprland and dependencies"
 rpm-ostree install "${hyprland_packages[@]}"
