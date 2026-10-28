@@ -76,7 +76,7 @@ Choose your desired variant and rebase to the unsigned image:
 
 ```bash
 # For base variant
-sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/syndr/phalanx-base:latest
+sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/syndr/phalanx:latest
 
 # For awesome variant
 sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/syndr/phalanx-awesome:latest
