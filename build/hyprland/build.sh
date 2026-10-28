@@ -159,6 +159,21 @@ else
   hyprland_packages+=(hyprland-qt-support hyprpolkitagent)
 fi
 
+# Bazzite's fc44 base image ships Terra X (terra-xorg-x11-server-Xwayland)
+# in the base commit, which conflicts with xorg-x11-server-Xwayland that the
+# Hyprland copr builds require. Override-remove the Terra package (same
+# pattern as workstation-nofun removing steam/lutris) so the classic Xorg
+# Xwayland server can be layered in for Hyprland. Nothing in the base
+# requires the Terra package (rpm -q --whatrequires), so the override is
+# clean. Uses the copr's hyprland-git build (newer than the 0.56.2 stable);
+# note it is a moving git snapshot - a broken snapshot fails the build in
+# CI rather than shipping.
+if rpm -q terra-xorg-x11-server-Xwayland >/dev/null 2>&1; then
+  echo "Base image ships Terra X - override-removing it in favor of Xorg Xwayland"
+  rpm-ostree override remove terra-xorg-x11-server-Xwayland
+fi
+hyprland_packages[0]=hyprland-git
+
 echo "Installing Hyprland and dependencies"
 rpm-ostree install "${hyprland_packages[@]}"
 

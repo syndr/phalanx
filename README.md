@@ -37,6 +37,17 @@ Modern Wayland compositor desktop environment:
 - Plugin build dependencies included for hyprpm customization
 - Audio/media tools (pavucontrol, playerctl, mpv, cava)
 
+> **Hyprland build source:** this variant installs the **`hyprland-git`**
+> build from the [lionheartp/Hyprland](https://copr.fedorainfracloud.org/coprs/lionheartp/Hyprland)
+> COPR — a moving git snapshot, newer than the stable `0.56.2` package. It is
+> used so the image tracks upstream Hyprland fixes; the cost is that the
+> installed commit can shift between image rebuilds (a broken snapshot fails
+> the CI build rather than shipping). If you need a pinned Hyprland, pin
+> `hyprland_packages[0]` to the stable `hyprland` in `build/hyprland/build.sh`.
+> On Bazzite fc44 (Terra X) bases the build also override-removes
+> `terra-xorg-x11-server-Xwayland` and layers in the classic Xorg Xwayland
+> server, which Hyprland's X11 support requires.
+
 ### `workstation`
 Full-featured development environment:
 - Container development stack (Docker CE, Docker Compose, Buildx)
@@ -65,7 +76,7 @@ Choose your desired variant and rebase to the unsigned image:
 
 ```bash
 # For base variant
-sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/syndr/phalanx-base:latest
+sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/syndr/phalanx:latest
 
 # For awesome variant
 sudo rpm-ostree rebase ostree-unverified-registry:ghcr.io/syndr/phalanx-awesome:latest
