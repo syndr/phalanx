@@ -2,7 +2,7 @@
 # Configuration for Hyprland desktop environment
 
 # COPR Repos and packages needed from them
-# lionheartp/Hyprland - hyprland, hyprpolkitagent, swww, cliphist
+# lionheartp/Hyprland - hyprland, hyprpolkitagent, swww, cliphist, waybar-git
 # erikreider/SwayNotificationCenter - SwayNotificationCenter
 # errornointernet/packages - wallust
 # tofik/nwg-shell - nwg-displays, nwg-look
@@ -47,7 +47,9 @@ hyprland_packages=(
   swww wallust
 
   # Desktop components
-  waybar SwayNotificationCenter nwg-displays quickshell
+  # waybar-git (lionheartp/alebastr COPRs): Fedora's waybar 0.15.0 predates Lua
+  # dispatch, so workspace clicks fail on a Lua-configured Hyprland.
+  waybar-git SwayNotificationCenter nwg-displays quickshell
 
   # Lan Mouse GitHub binary runtime deps (installed under non-RPM paths to avoid RPM collisions)
   libadwaita gtk4 libX11 libXtst
