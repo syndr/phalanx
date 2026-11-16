@@ -8,7 +8,9 @@ awesome_packages=(
 
   # Screen management and utilities
   xscreensaver-base xscreensaver-extras xscreensaver-gl-base xscreensaver-gl-extras
-  autorandr nitrogen barrier
+  autorandr nitrogen
+  # NOTE: barrier (KVM input sharing) was dropped from Fedora 45; no
+  # drop-in replacement in the base repos.
 
   # User utilities
   flameshot copyq ranger kitty redshift-gtk
@@ -33,7 +35,7 @@ source ../base/build.sh
 # Install Awesome WM
 #  - include dependencies for default config
 echo "Installing Awesome WM packages"
-rpm-ostree install "${awesome_packages[@]}"
+dnf5 install -y "${awesome_packages[@]}"
 
 echo "Configuring Awesome WM"
 # Configure Awesome WM

@@ -44,10 +44,18 @@ ARG VARIANT="base"
 # This must be the folder containing the build script and any other files needed for the build
 ARG WORKING_DIR="/tmp/build/${VARIANT}"
 
+# LAN_MOUSE_TAG / LAN_MOUSE_URL / LAN_MOUSE_DIGEST: pre-resolved Lan Mouse
+# release (tag, asset download URL, sha256 digest). The CI workflow resolves
+# them on the host with a GITHUB token - api.github.com rate-limits
+# unauthenticated calls per shared runner IP. Empty by default: the build
+# script falls back to resolving via the API (local builds).
+ARG LAN_MOUSE_TAG=""
+ARG LAN_MOUSE_URL=""
+ARG LAN_MOUSE_DIGEST=""
+
 ### 2. SOURCE IMAGE
 ## this is a standard Containerfile FROM using the build ARGs above to select the right upstream image
 FROM ghcr.io/ublue-os/${SOURCE_IMAGE}${SOURCE_SUFFIX}:${SOURCE_TAG}
-
 
 ### 3. MODIFICATIONS
 
@@ -56,11 +64,33 @@ COPY build /tmp/build
 # Declare ARG again after FROM to make it available in RUN
 ARG VARIANT=base
 
+# Lan Mouse release values pre-resolved by the CI workflow on the host, with a
+# GITHUB token: api.github.com rate-limits unauthenticated calls per IP (60/h)
+# and runner egress IPs are shared, so resolving inside the image build 403s
+# under load. Only resolved values are passed - never a token (build args land
+# in the pushed image config). When empty, install-lan-mouse.sh falls back to
+# resolving via the API itself (local builds).
+ARG LAN_MOUSE_TAG=""
+ARG LAN_MOUSE_URL=""
+ARG LAN_MOUSE_DIGEST=""
+
 RUN mkdir -p /var/lib/alternatives && \
     cd /tmp/build/${VARIANT} && \
-    ./build.sh && \
-    ostree container commit
+    ./build.sh
+# The bazzite base (fc45+) is bootc-native: there is no ostree repo in the
+# rootfs and `ostree container commit` no longer applies (it fails with
+# "Not in an ostree-based container environment"). Package changes are plain
+# OCI layers that bootc consumes as-is, and buildah carries the base's bootc
+# metadata into the derived image, so no explicit commit step is needed.
+# `bootc container lint` is the supported build-time validation. dnf5 cache
+# and logs are removed first so /var stays clean (lint warns on /var content).
+RUN dnf5 clean all && \
+    rm -rf /var/cache/libdnf5 /var/lib/dnf /var/log/dnf5.log && \
+    bootc container lint
+
 ## NOTES:
 # - /var/lib/alternatives is required to prevent failure with some RPM installs
-# - All RUN commands must end with ostree container commit
-#   see: https://coreos.github.io/rpm-ostree/container/#using-ostree-container-commit
+# - Package changes go through dnf5 (bootc-native base; rpm-ostree no longer
+#   works in container builds on fc45+ bases)
+# - `bootc container lint` is the final build step (replaces the legacy
+#   `ostree container commit`); see docs/adr/build-on-bootc-native-bases.md

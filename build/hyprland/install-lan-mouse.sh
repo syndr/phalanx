@@ -53,20 +53,35 @@ remove_unowned_path() {
 tmpdir="$(mktemp -d)"
 release_json="${tmpdir}/releases.json"
 
-echo "Resolving latest Lan Mouse release from GitHub"
-curl --fail --location --retry 5 --retry-all-errors --silent --show-error \
-  --header "Accept: application/vnd.github+json" \
-  "$api_url" \
-  --output "$release_json"
+if [[ -n "${LAN_MOUSE_TAG:-}" && -n "${LAN_MOUSE_URL:-}" ]]; then
+  # CI pre-resolved the release on the host with a GITHUB token: api.github.com
+  # rate-limits unauthenticated calls per IP (60/h) and GitHub Actions runner
+  # egress IPs are shared, so resolving inside the image build 403s under
+  # load. Only the resolved values are passed as build args - never a token,
+  # which would leak into the pushed image config.
+  echo "Using CI-resolved Lan Mouse ${LAN_MOUSE_TAG} from ${LAN_MOUSE_URL}"
+  selected_tag="${LAN_MOUSE_TAG}"
+  asset_url="${LAN_MOUSE_URL}"
+  asset_digest="${LAN_MOUSE_DIGEST:-}"
+else
+  # Local builds: resolve directly from the GitHub API.
+  echo "Resolving latest Lan Mouse release from GitHub"
+  curl --fail --location --retry 5 --retry-all-errors --silent --show-error \
+    --header "Accept: application/vnd.github+json" \
+    "$api_url" \
+    --output "$release_json"
 
-selected_release="$(jq -c 'map(select(.draft | not)) | sort_by(.published_at // .created_at) | last' "$release_json")"
-selected_tag="$(jq -r '.tag_name // empty' <<< "$selected_release")"
-asset_url="$(jq -r --arg name "$asset_name" '.assets[]? | select(.name == $name) | .browser_download_url // empty' <<< "$selected_release")"
-asset_digest="$(jq -r --arg name "$asset_name" '.assets[]? | select(.name == $name) | .digest // empty' <<< "$selected_release")"
+  selected_release="$(jq -c 'map(select(.draft | not)) | sort_by(.published_at // .created_at) | last' "$release_json")"
+  selected_tag="$(jq -r '.tag_name // empty' <<< "$selected_release")"
+  asset_url="$(jq -r --arg name "$asset_name" '.assets[]? | select(.name == $name) | .browser_download_url // empty' <<< "$selected_release")"
+  asset_digest="$(jq -r --arg name "$asset_name" '.assets[]? | select(.name == $name) | .digest // empty' <<< "$selected_release")"
+fi
 
 if [[ -z "$selected_tag" || -z "$asset_url" ]]; then
   echo "Unable to find ${asset_name} in the latest Lan Mouse release"
-  jq -r '.[] | select(.draft | not) | "\(.tag_name) prerelease=\(.prerelease) published=\(.published_at)"' "$release_json"
+  if [[ -f "$release_json" ]]; then
+    jq -r '.[] | select(.draft | not) | "\(.tag_name) prerelease=\(.prerelease) published=\(.published_at)"' "$release_json"
+  fi
   exit 1
 fi
 

@@ -27,6 +27,7 @@ decision, add a **new** ADR that supersedes the old one rather than editing it.
 
 ## Index
 
+- [Build on bootc-native bazzite bases](build-on-bootc-native-bases.md)
 - [Provide swaylock-plugin screensaver lockscreen dependencies in the hyprland image](provide-swaylock-plugin-screensaver-lockscreen-deps.md)
 
 [nygard]: https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions

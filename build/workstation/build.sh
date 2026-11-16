@@ -27,16 +27,17 @@ echo "Installing Hyprland"
 source ../hyprland/build.sh
 
 echo "Installing Workstation packages"
-rpm-ostree install "${workstation_packages[@]}"
+dnf5 install -y "${workstation_packages[@]}"
 
 echo "Creating 1Password CLI sysusers configuration"
 # Pre-create the onepassword-cli group with a GID of 11005 (>= 1000)
-# This ensures that when the layered 1password-cli package is installed/updated on the host,
+# This ensures that when the 1password-cli package is installed/updated on the host,
 # its files are owned by a valid user-level GID rather than a system GID under 1000.
 mkdir -p /usr/lib/sysusers.d
 echo "g onepassword-cli 11005 -" > /usr/lib/sysusers.d/10-1password-cli.conf
-# Force materialization of the group in /usr/lib/group during image compilation
-# so that the offline rpm-ostree package layerer on the host can resolve the group owner of /usr/bin/op.
+# Force materialization of the group in /usr/lib/group during image build
+# so /usr/bin/op resolves to a valid user-level GID when the package is
+# installed on the host.
 echo "onepassword-cli:x:11005:" >> /usr/lib/group
 
 echo "Adding 1Password repository"
@@ -54,7 +55,7 @@ EOF
 echo "Installing 1Password"
 # Try to install 1Password from repository
 # Note: This may fail in container builds due to post-install scripts
-rpm-ostree install 1password || {
+dnf5 install -y 1password || {
     echo "Warning: 1Password installation failed (expected in container build)"
     echo "1Password repository has been configured and can be installed after first boot"
 }
@@ -63,4 +64,4 @@ echo "Adding Docker CE repository"
 curl -fsSL https://download.docker.com/linux/fedora/docker-ce.repo -o /etc/yum.repos.d/docker-ce.repo
 
 echo "Installing Docker CE"
-rpm-ostree install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+dnf5 install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
