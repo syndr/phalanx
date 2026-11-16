@@ -33,7 +33,7 @@ source ../base/build.sh
 # Install Awesome WM
 #  - include dependencies for default config
 echo "Installing Awesome WM packages"
-rpm-ostree install "${awesome_packages[@]}"
+dnf5 install -y "${awesome_packages[@]}"
 
 echo "Configuring Awesome WM"
 # Configure Awesome WM

@@ -40,5 +40,5 @@ echo "Adding wezfurlong/wezterm-nightly COPR repository"
 dnf5 copr enable -y wezfurlong/wezterm-nightly
 
 echo "Installing base packages"
-rpm-ostree install "${base_packages[@]}"
+dnf5 install -y "${base_packages[@]}"
 

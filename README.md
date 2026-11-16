@@ -6,11 +6,17 @@ An opinionated, immutable Linux desktop system built on Fedora Atomic OS and [Un
 
 ## 🎯 Key Features
 
-- **Immutable & Atomic**: Built on rpm-ostree for reliable, atomic system updates with rollback capability
+- **Immutable & Atomic**: Built on bootc/ostree for reliable, atomic system updates with rollback capability
 - **Container-Native**: Delivered as OCI container images for consistent deployments
 - **Developer-Ready**: Pre-configured development environments with Docker, modern tools, and productivity software
 - **Enterprise-Ready**: Active Directory integration and security-focused configuration
 - **Hardware Support**: Native support for NVIDIA GPUs and various hardware configurations
+
+> **Base image:** Phalanx builds on `ghcr.io/ublue-os/bazzite:stable`, which
+> moved to **Fedora 45** (bootc-native) on 2026-11-04. Rebasing an fc44
+> system is a full upgrade. Packages are now baked into the image rootfs as
+> plain OCI layers rather than rpm-ostree layered packages, so on an installed
+> system they are part of the base commit and upgrades follow the image.
 
 ## 📦 Available Variants
 
@@ -44,8 +50,8 @@ Modern Wayland compositor desktop environment:
 > installed commit can shift between image rebuilds (a broken snapshot fails
 > the CI build rather than shipping). If you need a pinned Hyprland, pin
 > `hyprland_packages[0]` to the stable `hyprland` in `build/hyprland/build.sh`.
-> On Bazzite fc44 (Terra X) bases the build also override-removes
-> `terra-xorg-x11-server-Xwayland` and layers in the classic Xorg Xwayland
+> On Bazzite (Terra X) bases the build also removes
+> `terra-xorg-x11-server-Xwayland` and installs the classic Xorg Xwayland
 > server, which Hyprland's X11 support requires.
 
 ### `workstation`

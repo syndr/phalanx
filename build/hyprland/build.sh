@@ -149,8 +149,9 @@ for repo in "${copr_repos[@]}"; do
 done
 
 # Add Qt-coupled Hyprland helpers only when the base image Qt is new enough.
-# bazzite-nvidia can lag Fedora's Qt updates, and rpm-ostree cannot layer
-# packages that require replacing qt6-qtbase from the base commit.
+# bazzite-nvidia can lag Fedora's Qt updates. dnf can replace qt6-qtbase in
+# the rootfs (unlike rpm-ostree), but we keep the gate so the nvidia base's
+# Qt stack is not upgraded under it.
 QT_VERSION=$(rpm -q qt6-qtbase --queryformat '%{VERSION}' 2>/dev/null || echo "unknown")
 echo "Detected Qt version: $QT_VERSION"
 if [[ "$QT_VERSION" == "unknown" ]] ||
@@ -161,23 +162,22 @@ else
   hyprland_packages+=(hyprland-qt-support hyprpolkitagent)
 fi
 
-# Bazzite's fc44 base image ships Terra X (terra-xorg-x11-server-Xwayland)
-# in the base commit, which conflicts with xorg-x11-server-Xwayland that the
-# Hyprland copr builds require. Override-remove the Terra package (same
-# pattern as workstation-nofun removing steam/lutris) so the classic Xorg
-# Xwayland server can be layered in for Hyprland. Nothing in the base
-# requires the Terra package (rpm -q --whatrequires), so the override is
-# clean. Uses the copr's hyprland-git build (newer than the 0.56.2 stable);
-# note it is a moving git snapshot - a broken snapshot fails the build in
-# CI rather than shipping.
+# Bazzite's base image ships Terra X (terra-xorg-x11-server-Xwayland), which
+# conflicts with xorg-x11-server-Xwayland that the Hyprland copr builds
+# require. Remove the Terra package (same pattern as workstation-nofun
+# removing steam/lutris) so the classic Xorg Xwayland server can be installed
+# for Hyprland. Nothing in the base requires the Terra package
+# (rpm -q --whatrequires), so the removal is clean. Uses the copr's
+# hyprland-git build (newer than the 0.56.2 stable); note it is a moving git
+# snapshot - a broken snapshot fails the build in CI rather than shipping.
 if rpm -q terra-xorg-x11-server-Xwayland >/dev/null 2>&1; then
-  echo "Base image ships Terra X - override-removing it in favor of Xorg Xwayland"
-  rpm-ostree override remove terra-xorg-x11-server-Xwayland
+  echo "Base image ships Terra X - removing it in favor of Xorg Xwayland"
+  dnf5 remove -y terra-xorg-x11-server-Xwayland
 fi
 hyprland_packages[0]=hyprland-git
 
 echo "Installing Hyprland and dependencies"
-rpm-ostree install "${hyprland_packages[@]}"
+dnf5 install -y "${hyprland_packages[@]}"
 
 echo "Installing Lan Mouse"
 "${SCRIPT_DIR}/install-lan-mouse.sh"

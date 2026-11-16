@@ -58,9 +58,21 @@ ARG VARIANT=base
 
 RUN mkdir -p /var/lib/alternatives && \
     cd /tmp/build/${VARIANT} && \
-    ./build.sh && \
-    ostree container commit
+    ./build.sh
+# The bazzite base (fc45+) is bootc-native: there is no ostree repo in the
+# rootfs and `ostree container commit` no longer applies (it fails with
+# "Not in an ostree-based container environment"). Package changes are plain
+# OCI layers that bootc consumes as-is, and buildah carries the base's bootc
+# metadata into the derived image, so no explicit commit step is needed.
+# `bootc container lint` is the supported build-time validation. dnf5 cache
+# and logs are removed first so /var stays clean (lint warns on /var content).
+RUN dnf5 clean all && \
+    rm -rf /var/cache/libdnf5 /var/lib/dnf /var/log/dnf5.log && \
+    bootc container lint
+
 ## NOTES:
 # - /var/lib/alternatives is required to prevent failure with some RPM installs
-# - All RUN commands must end with ostree container commit
-#   see: https://coreos.github.io/rpm-ostree/container/#using-ostree-container-commit
+# - Package changes go through dnf5 (bootc-native base; rpm-ostree no longer
+#   works in container builds on fc45+ bases)
+# - `bootc container lint` is the final build step (replaces the legacy
+#   `ostree container commit`); see docs/adr/build-on-bootc-native-bases.md

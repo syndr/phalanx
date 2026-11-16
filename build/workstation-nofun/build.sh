@@ -12,4 +12,4 @@ echo "Configuring workstation image"
 source ../workstation/build.sh
 
 echo "Removing unprofessional packages"
-rpm-ostree override remove "${workstation_packages_remove[@]}"
+dnf5 remove -y "${workstation_packages_remove[@]}"
