@@ -44,10 +44,18 @@ ARG VARIANT="base"
 # This must be the folder containing the build script and any other files needed for the build
 ARG WORKING_DIR="/tmp/build/${VARIANT}"
 
+# LAN_MOUSE_TAG / LAN_MOUSE_URL / LAN_MOUSE_DIGEST: pre-resolved Lan Mouse
+# release (tag, asset download URL, sha256 digest). The CI workflow resolves
+# them on the host with a GITHUB token - api.github.com rate-limits
+# unauthenticated calls per shared runner IP. Empty by default: the build
+# script falls back to resolving via the API (local builds).
+ARG LAN_MOUSE_TAG=""
+ARG LAN_MOUSE_URL=""
+ARG LAN_MOUSE_DIGEST=""
+
 ### 2. SOURCE IMAGE
 ## this is a standard Containerfile FROM using the build ARGs above to select the right upstream image
 FROM ghcr.io/ublue-os/${SOURCE_IMAGE}${SOURCE_SUFFIX}:${SOURCE_TAG}
-
 
 ### 3. MODIFICATIONS
 
@@ -55,6 +63,16 @@ COPY build /tmp/build
 
 # Declare ARG again after FROM to make it available in RUN
 ARG VARIANT=base
+
+# Lan Mouse release values pre-resolved by the CI workflow on the host, with a
+# GITHUB token: api.github.com rate-limits unauthenticated calls per IP (60/h)
+# and runner egress IPs are shared, so resolving inside the image build 403s
+# under load. Only resolved values are passed - never a token (build args land
+# in the pushed image config). When empty, install-lan-mouse.sh falls back to
+# resolving via the API itself (local builds).
+ARG LAN_MOUSE_TAG=""
+ARG LAN_MOUSE_URL=""
+ARG LAN_MOUSE_DIGEST=""
 
 RUN mkdir -p /var/lib/alternatives && \
     cd /tmp/build/${VARIANT} && \

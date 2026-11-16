@@ -133,6 +133,38 @@ jobs:
             org.opencontainers.image.description=${{ env.MY_IMAGE_DESC }}
             org.opencontainers.image.title=${{ env.MY_IMAGE_NAME }}
 
+      # Resolve the Lan Mouse release on the host with the workflow token and
+      # hand the result to the build as args. Resolving inside the image build
+      # would be an unauthenticated api.github.com call from a shared runner IP
+      # (60 req/h unauthenticated; --retry-all-errors turns the 403 into a
+      # six-retry failure). With the token: 5000 req/h. Only URLs and the
+      # digest are passed - never the token (build args land in the pushed
+      # image config). Variants that don't install Lan Mouse skip this.
+      - name: Resolve Lan Mouse release
+        id: lan-mouse
+        if: inputs.permutation == 'hyprland' || inputs.permutation == 'workstation' || inputs.permutation == 'workstation-nofun'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -uo pipefail
+          asset="lan-mouse-linux-x86_64"
+          json="$(curl --fail --silent --show-error \
+            --header "Accept: application/vnd.github+json" \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            https://api.github.com/repos/feschber/lan-mouse/releases)"
+          release="$(jq -c 'map(select(.draft | not)) | sort_by(.published_at // .created_at) | last' <<< "$json")"
+          tag="$(jq -r '.tag_name // empty' <<< "$release")"
+          url="$(jq -r --arg n "$asset" '.assets[]? | select(.name == $n) | .browser_download_url // empty' <<< "$release")"
+          digest="$(jq -r --arg n "$asset" '.assets[]? | select(.name == $n) | .digest // empty' <<< "$release")"
+          if [[ -z "$tag" || -z "$url" || -z "$digest" ]]; then
+            echo "::error::could not resolve Lan Mouse ${asset} (tag='${tag}' url='${url}' digest='${digest}')"
+            exit 1
+          fi
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "url=${url}" >> "$GITHUB_OUTPUT"
+          echo "digest=${digest}" >> "$GITHUB_OUTPUT"
+          echo "Resolved Lan Mouse ${tag}"
+
       # Build image using Buildah action
       - name: Build Image
         id: build_image
@@ -150,6 +182,9 @@ jobs:
           build-args: |
             SOURCE_SUFFIX=${{ env.IMAGE_SUFFIX }}
             VARIANT=${{ inputs.permutation }}
+            LAN_MOUSE_TAG=${{ steps.lan-mouse.outputs.tag }}
+            LAN_MOUSE_URL=${{ steps.lan-mouse.outputs.url }}
+            LAN_MOUSE_DIGEST=${{ steps.lan-mouse.outputs.digest }}
 
       # Workaround bug where capital letters in your GitHub username make it impossible to push to GHCR.
       # https://github.com/macbre/push-to-ghcr/issues/12
