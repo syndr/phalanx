@@ -8,7 +8,9 @@ awesome_packages=(
 
   # Screen management and utilities
   xscreensaver-base xscreensaver-extras xscreensaver-gl-base xscreensaver-gl-extras
-  autorandr nitrogen barrier
+  autorandr nitrogen
+  # NOTE: barrier (KVM input sharing) was dropped from Fedora 45; no
+  # drop-in replacement in the base repos.
 
   # User utilities
   flameshot copyq ranger kitty redshift-gtk

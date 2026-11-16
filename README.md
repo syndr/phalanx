@@ -16,7 +16,9 @@ An opinionated, immutable Linux desktop system built on Fedora Atomic OS and [Un
 > moved to **Fedora 45** (bootc-native) on 2026-11-04. Rebasing an fc44
 > system is a full upgrade. Packages are now baked into the image rootfs as
 > plain OCI layers rather than rpm-ostree layered packages, so on an installed
-> system they are part of the base commit and upgrades follow the image.
+> system they are part of the base commit and upgrades follow the image. The
+> `awesome` variant no longer ships `barrier` (KVM input sharing) — Fedora 45
+> dropped the package.
 
 ## 📦 Available Variants
 
